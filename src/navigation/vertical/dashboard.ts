@@ -41,6 +41,11 @@ export default [
     icon: { icon: 'tabler-file-dollar' },
   },
     {
+    title: 'Products & Services',
+    to: 'apps-products', // single link
+    icon: { icon: 'tabler-box' },
+  },
+    {
     title: 'Chat',
     icon: { icon: 'tabler-message-circle-2' },
     to: 'apps-chat',

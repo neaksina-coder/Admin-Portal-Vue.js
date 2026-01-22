@@ -8,6 +8,13 @@ const ability = useAbility()
 const userData = useCookie<any>('userData')
 
 const logout = async () => {
+  try {
+    await $api('/auth/logout', { method: 'POST' })
+  }
+  catch (err) {
+    console.error(err)
+  }
+
   // Remove "accessToken" from cookie
   useCookie('accessToken').value = null
 

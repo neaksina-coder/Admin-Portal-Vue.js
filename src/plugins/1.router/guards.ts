@@ -16,7 +16,11 @@ export const setupGuards = (router: _RouterTyped<RouteNamedMap & { [key: string]
      * Check if user is logged in by checking if token & user data exists in local storage
      * Feel free to update this logic to suit your needs
      */
-    const isLoggedIn = !!(useCookie('userData').value && useCookie('accessToken').value)
+    const userData = useCookie('userData').value as { role?: string } | null
+    const accessToken = useCookie('accessToken').value
+    const isLoggedIn = !!(userData && accessToken)
+    const role = userData?.role
+    const defaultRoute = role === 'user' ? { name: 'front-pages-landing-page' } : { name: 'dashboards-crm' }
 
     /*
       If user is logged in and is trying to access login like page, redirect to home
@@ -25,9 +29,15 @@ export const setupGuards = (router: _RouterTyped<RouteNamedMap & { [key: string]
      */
     if (to.meta.unauthenticatedOnly) {
       if (isLoggedIn)
-        return '/'
+        return defaultRoute
       else
         return undefined
+    }
+
+    if (isLoggedIn && role === 'user') {
+      const isFrontPage = to.meta.public || to.meta.layout === 'blank' || String(to.name || '').startsWith('front-pages-')
+      if (!isFrontPage)
+        return { name: 'front-pages-landing-page' }
     }
 
     if (!canNavigate(to) && to.matched.length) {

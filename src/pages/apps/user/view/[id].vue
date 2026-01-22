@@ -10,6 +10,13 @@ const route = useRoute('apps-user-view-id')
 
 const userTab = ref(null)
 
+definePage({
+  meta: {
+    action: 'read',
+    subject: 'Users',
+  },
+})
+
 const tabs = [
   { icon: 'tabler-users', title: 'Account' },
   { icon: 'tabler-lock', title: 'Security' },

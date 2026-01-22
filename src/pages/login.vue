@@ -38,14 +38,19 @@ const errors = ref<Record<string, string | undefined>>({
 const refVForm = ref<VForm>()
 
 const credentials = ref({
-  email: 'admin@demo.com',
-  password: 'admin',
+  email: '',
+  password: '',
 })
 
 const rememberMe = ref(false)
 
 const login = async () => {
   try {
+    errors.value = {
+      email: undefined,
+      password: undefined,
+    }
+
     const res = await $api('/auth/login', {
       method: 'POST',
       body: {
@@ -53,11 +58,36 @@ const login = async () => {
         password: credentials.value.password,
       },
       onResponseError({ response }) {
-        errors.value = response._data.errors
+        errors.value = response._data?.errors ?? {
+          email: response._data?.message ?? 'Login failed',
+        }
       },
     })
 
-    const { accessToken, userData, userAbilityRules } = res
+    const accessToken = res.token
+    const userData = res.user
+    const role = userData?.role
+    const roleAbilityMap: Record<string, { action: 'manage' | 'read' | 'create' | 'update' | 'delete'; subject: 'Products' | 'Categories' | 'Users' | 'Roles' | 'Permissions' | 'Admins' | 'all' }[]> = {
+      user: [
+        { action: 'read', subject: 'Products' },
+        { action: 'read', subject: 'Categories' },
+      ],
+      admin: [
+        { action: 'read', subject: 'Products' },
+        { action: 'create', subject: 'Products' },
+        { action: 'update', subject: 'Products' },
+        { action: 'delete', subject: 'Products' },
+        { action: 'read', subject: 'Categories' },
+        { action: 'create', subject: 'Categories' },
+        { action: 'update', subject: 'Categories' },
+        { action: 'delete', subject: 'Categories' },
+        { action: 'read', subject: 'Users' },
+      ],
+      superuser: [
+        { action: 'manage', subject: 'all' },
+      ],
+    }
+    const userAbilityRules = res.userAbilityRules ?? roleAbilityMap[role] ?? []
 
     useCookie('userAbilityRules').value = userAbilityRules
     ability.update(userAbilityRules)
@@ -68,7 +98,8 @@ const login = async () => {
     // Redirect to `to` query if exist or redirect to index route
     // ❗ nextTick is required to wait for DOM updates and later redirect
     await nextTick(() => {
-      router.replace(route.query.to ? String(route.query.to) : '/')
+      const defaultRoute = role === 'user' ? { name: 'front-pages-landing-page' } : { name: 'dashboards-crm' }
+      router.replace(route.query.to ? String(route.query.to) : defaultRoute)
     })
   }
   catch (err) {
@@ -142,19 +173,6 @@ const onSubmit = () => {
           <p class="mb-0">
             Please sign-in to your account and start the adventure
           </p>
-        </VCardText>
-        <VCardText>
-          <VAlert
-            color="primary"
-            variant="tonal"
-          >
-            <p class="text-sm mb-2">
-              Admin Email: <strong>admin@demo.com</strong> / Pass: <strong>admin</strong>
-            </p>
-            <p class="text-sm mb-0">
-              Client Email: <strong>client@demo.com</strong> / Pass: <strong>client</strong>
-            </p>
-          </VAlert>
         </VCardText>
         <VCardText>
           <VForm

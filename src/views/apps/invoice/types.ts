@@ -1,10 +1,17 @@
 import type { Invoice, PaymentDetails } from '@db/apps/invoice/types'
 
 export interface PurchasedProduct {
-  title: string
-  cost: number
-  hours: number
+  id: number | null
+  name: string
+  sku: string
   description: string
+  category: string
+  price: number
+  cost: number
+  stock: number
+  unit: string
+  status: 'active' | 'inactive' | 'discontinued'
+  quantity: number
 }
 
 export interface InvoiceData {

@@ -28,7 +28,7 @@ const shortcuts = [
     icon: 'tabler-device-desktop-analytics',
     title: 'Dashboard',
     subtitle: 'Dashboard Analytics',
-    to: { name: 'dashboards-analytics' },
+    to: { name: 'dashboards-crm' },
   },
   {
     icon: 'tabler-settings',

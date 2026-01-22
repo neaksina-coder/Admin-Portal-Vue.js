@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { VForm } from 'vuetify/components/VForm'
 import { useGenerateImageVariant } from '@core/composable/useGenerateImageVariant'
 import { VNodeRenderer } from '@layouts/components/VNodeRenderer'
 import { themeConfig } from '@themeConfig'
@@ -9,6 +10,13 @@ import authV2MaskDark from '@images/pages/misc-mask-dark.png'
 import authV2MaskLight from '@images/pages/misc-mask-light.png'
 
 const email = ref('')
+const router = useRouter()
+
+const refVForm = ref<VForm>()
+
+const errors = ref<Record<string, string | undefined>>({
+  email: undefined,
+})
 
 const authThemeImg = useGenerateImageVariant(authV2ForgotPasswordIllustrationLight, authV2ForgotPasswordIllustrationDark)
 
@@ -20,6 +28,37 @@ definePage({
     unauthenticatedOnly: true,
   },
 })
+
+const requestOtp = async () => {
+  try {
+    errors.value = { email: undefined }
+
+    await $api('/auth/forgot-password', {
+      method: 'POST',
+      body: {
+        email: email.value,
+      },
+      onResponseError({ response }) {
+        errors.value = response._data?.errors ?? {
+          email: response._data?.message ?? 'Request failed',
+        }
+      },
+    })
+
+    await router.push({ name: 'otp-verify', query: { email: email.value } })
+  }
+  catch (err) {
+    console.error(err)
+  }
+}
+
+const onSubmit = () => {
+  refVForm.value?.validate()
+    .then(({ valid: isValid }) => {
+      if (isValid)
+        requestOtp()
+    })
+}
 </script>
 
 <template>
@@ -82,7 +121,10 @@ definePage({
         </VCardText>
 
         <VCardText>
-          <VForm @submit.prevent="() => {}">
+          <VForm
+            ref="refVForm"
+            @submit.prevent="onSubmit"
+          >
             <VRow>
               <!-- email -->
               <VCol cols="12">
@@ -92,6 +134,8 @@ definePage({
                   label="Email"
                   type="email"
                   placeholder="johndoe@email.com"
+                  :rules="[requiredValidator, emailValidator]"
+                  :error-messages="errors.email"
                 />
               </VCol>
 

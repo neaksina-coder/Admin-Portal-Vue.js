@@ -40,6 +40,9 @@ const worker = setupWorker(
 )
 
 export default function () {
+  if (import.meta.env.VITE_MOCK_API !== 'true')
+    return
+
   const workerUrl = `${import.meta.env.BASE_URL ?? '/'}mockServiceWorker.js`
 
   worker.start({

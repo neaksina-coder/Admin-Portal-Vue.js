@@ -14,7 +14,7 @@ export const redirects: RouteRecordRaw[] = [
       const userData = useCookie<Record<string, unknown> | null | undefined>('userData')
       const userRole = userData.value?.role
 
-      if (userRole === 'admin')
+      if (userRole === 'admin' || userRole === 'superuser' || userRole === 'user')
         return { name: 'dashboards-crm' }
       if (userRole === 'client')
         return { name: 'access-control' }
@@ -58,5 +58,4 @@ export const routes: RouteRecordRaw[] = [
     },
   },
 ]
-
 

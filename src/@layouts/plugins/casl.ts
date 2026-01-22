@@ -18,6 +18,10 @@ export const can = (action: string | undefined, subject: string | undefined) => 
   if (!vm)
     return false
 
+  // If no ACL is specified on a nav item, allow it by default.
+  if (!action || !subject)
+    return true
+
   const localCan = vm.proxy && '$can' in vm.proxy
 
   // @ts-expect-error We will get TS error in below line because we aren't using $can in component instance
@@ -45,6 +49,10 @@ export const canNavigate = (to: RouteLocationNormalized) => {
 
   // Get the most specific route (last one in the matched array)
   const targetRoute = to.matched[to.matched.length - 1]
+
+  const hasAclMeta = to.matched.some(route => route.meta.action || route.meta.subject)
+  if (!hasAclMeta)
+    return true
 
   // If the target route has specific permissions, check those first
   if (targetRoute?.meta?.action && targetRoute?.meta?.subject)

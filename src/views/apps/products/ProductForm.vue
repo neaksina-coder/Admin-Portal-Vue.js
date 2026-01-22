@@ -1,13 +1,13 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
-import { useRouter } from 'vue-router';
+import { onMounted, ref, watch } from 'vue';
 
 const props = defineProps<{
   id?: string
   isEdit?: boolean
+  productData?: any
 }>()
 
-const router = useRouter()
+const emit = defineEmits(['save', 'cancel'])
 
 const categories = [
   { title: 'Services', value: 'services' },
@@ -36,6 +36,13 @@ const formData = ref({
   status: 'active',
 })
 
+watch(() => props.productData, (val) => {
+  if (val) {
+    formData.value = { ...val }
+  }
+}, { immediate: true })
+
+
 onMounted(() => {
   if (props.isEdit && props.id) {
     // Simulate fetch
@@ -54,19 +61,17 @@ onMounted(() => {
 })
 
 const saveProduct = () => {
-  console.log('Saving product:', formData.value)
-  router.push({ name: 'apps-products' })
+  emit('save', formData.value)
+}
+
+const cancelForm = () => {
+  emit('cancel')
 }
 </script>
 
 <template>
   <VRow>
     <VCol cols="12">
-      <div class="d-flex justify-space-between align-center mb-6">
-        <h4 class="text-h4">{{ isEdit ? 'Edit Product' : 'Add New Product' }}</h4>
-        <VBtn variant="tonal" color="secondary" :to="{ name: 'apps-products' }">Back to List</VBtn>
-      </div>
-
       <VCard>
         <VCardText>
           <VRow>
@@ -96,7 +101,11 @@ const saveProduct = () => {
             </VCol>
           </VRow>
         </VCardText>
-        <VCardActions class="pa-4"><VSpacer /><VBtn color="secondary" variant="tonal" :to="{ name: 'apps-products' }">Cancel</VBtn><VBtn color="primary" @click="saveProduct">Save Product</VBtn></VCardActions>
+        <VCardActions class="pa-4">
+          <VSpacer />
+          <VBtn color="secondary" variant="tonal" @click="cancelForm">Cancel</VBtn>
+          <VBtn color="primary" @click="saveProduct">Save Product</VBtn>
+        </VCardActions>
       </VCard>
     </VCol>
   </VRow>

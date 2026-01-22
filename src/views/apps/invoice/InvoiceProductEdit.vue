@@ -1,5 +1,8 @@
-<!-- eslint-disable vue/no-mutating-props -->
 <script setup lang="ts">
+import { computed, ref, watch } from 'vue'
+import type { PurchasedProduct } from './types'
+import { useProducts } from '@/composables/useProducts'
+
 interface Emit {
   (e: 'removeProduct', value: number): void
   (e: 'totalAmount', value: number): void
@@ -7,68 +10,46 @@ interface Emit {
 
 interface Props {
   id: number
-  data: {
-    title: string
-    cost: number
-    hours: number
-    description: string
-  }
+  data: PurchasedProduct
 }
 
 const props = withDefaults(defineProps<Props>(), {
   data: () => ({
-    title: 'App Design',
-    cost: 24,
-    hours: 1,
+    id: null,
+    name: 'App Design',
+    sku: 'SKU-001',
     description: 'Designed UI kit & app pages.',
+    category: 'services',
+    price: 24,
+    cost: 24,
+    stock: 999,
+    unit: 'hour',
+    status: 'active',
+    quantity: 1,
   }),
 })
 
 const emit = defineEmits<Emit>()
+const { products } = useProducts()
 
-const itemsOptions: Props['data'][] = [
-  {
-    title: 'App Design',
-    cost: 24,
-    hours: 1,
-    description: 'Designed UI kit & app pages.',
-  },
-  {
-    title: 'App Customization',
-    cost: 26,
-    hours: 1,
-    description: 'Customization & Bug Fixes.',
-  },
-  {
-    title: 'ABC Template',
-    cost: 28,
-    hours: 1,
-    description: 'Vuetify admin template.',
-  },
-  {
-    title: 'App Development',
-    cost: 32,
-    hours: 1,
-    description: 'Native App Development.',
-  },
-]
-
-const selectedItem = ref('App Customization')
+const selectedProduct = ref<PurchasedProduct['name'] | undefined>(props.data.name)
 const localProductData = ref(structuredClone(toRaw(props.data)))
 
-watch(selectedItem, () => {
-  const item = itemsOptions.filter(obj => {
-    return obj.title === selectedItem.value
-  })
-
-  localProductData.value = item[0]
+watch(selectedProduct, () => {
+  const product = products.value.find(p => p.name === selectedProduct.value)
+  if (product) {
+    localProductData.value = {
+      ...product,
+      quantity: 1,
+    }
+  }
 })
 
 const removeProduct = () => {
   emit('removeProduct', props.id)
 }
 
-const totalPrice = computed(() => Number(localProductData.value.cost) * Number(localProductData.value.hours))
+const totalPrice = computed(() => Number(localProductData.value.price) * Number(localProductData.value.quantity))
 
 watch(totalPrice, () => {
   emit('totalAmount', totalPrice.value)
@@ -92,7 +73,7 @@ watch(totalPrice, () => {
         md="2"
       >
         <h6 class="text-h6 ps-2">
-          Cost
+          Price
         </h6>
       </VCol>
       <VCol
@@ -100,7 +81,7 @@ watch(totalPrice, () => {
         md="2"
       >
         <h6 class="text-h6 ps-2">
-          Hours
+          Quantity
         </h6>
       </VCol>
       <VCol
@@ -108,7 +89,7 @@ watch(totalPrice, () => {
         md="2"
       >
         <h6 class="text-h6">
-          Price
+          Total
         </h6>
       </VCol>
     </VRow>
@@ -128,10 +109,10 @@ watch(totalPrice, () => {
         >
           <AppSelect
             id="item"
-            v-model="selectedItem"
-            :items="itemsOptions"
-            item-title="title"
-            item-value="title"
+            v-model="selectedProduct"
+            :items="products"
+            item-title="name"
+            item-value="name"
             placeholder="Select Item"
             class="mb-6"
           />
@@ -151,9 +132,9 @@ watch(totalPrice, () => {
         >
           <AppTextField
             id="item-cost"
-            v-model="localProductData.cost"
+            v-model="localProductData.price"
             type="number"
-            placeholder="Cost"
+            placeholder="Price"
             class="mb-6"
           />
 
@@ -178,10 +159,10 @@ watch(totalPrice, () => {
           sm="4"
         >
           <AppTextField
-            id="item-hours"
-            v-model="localProductData.hours"
+            id="item-quantity"
+            v-model="localProductData.quantity"
             type="number"
-            placeholder="5"
+            placeholder="1"
           />
         </VCol>
         <VCol

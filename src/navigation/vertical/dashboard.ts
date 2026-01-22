@@ -44,6 +44,8 @@ export default [
     title: 'Products & Services',
     to: 'apps-products', // single link
     icon: { icon: 'tabler-box' },
+    action: 'read',
+    subject: 'Products',
   },
     {
     title: 'Chat',

@@ -1,6 +1,13 @@
 <script setup lang="ts">
 import type { Permission } from '@db/apps/permission/types'
 
+definePage({
+  meta: {
+    action: 'manage',
+    subject: 'Permissions',
+  },
+})
+
 const headers = [
   { title: 'Name', key: 'name' },
   { title: 'Assigned To', key: 'assignedTo', sortable: false },

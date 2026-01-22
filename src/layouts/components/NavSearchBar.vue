@@ -32,10 +32,10 @@ const suggestionGroups: SuggestionGroup[] = [
   {
     title: 'Popular Searches',
     content: [
-      { icon: 'tabler-chart-bar', title: 'Analytics', url: { name: 'dashboards-analytics' } },
+      { icon: 'tabler-chart-bar', title: 'Analytics', url: { name: 'dashboards-crm' } },
       { icon: 'tabler-chart-donut-3', title: 'CRM', url: { name: 'dashboards-crm' } },
-      { icon: 'tabler-shopping-cart', title: 'eCommerce', url: { name: 'dashboards-ecommerce' } },
-      { icon: 'tabler-truck', title: 'Logistics', url: { name: 'dashboards-logistics' } },
+      { icon: 'tabler-shopping-cart', title: 'eCommerce', url: { name: 'dashboards-crm' } },
+      { icon: 'tabler-truck', title: 'Logistics', url: { name: 'dashboards-crm' } },
     ],
   },
   {
@@ -72,7 +72,7 @@ const noDataSuggestions: Suggestion[] = [
   {
     title: 'Analytics',
     icon: 'tabler-chart-bar',
-    url: { name: 'dashboards-analytics' },
+    url: { name: 'dashboards-crm' },
   },
   {
     title: 'CRM',
@@ -82,7 +82,7 @@ const noDataSuggestions: Suggestion[] = [
   {
     title: 'eCommerce',
     icon: 'tabler-shopping-cart',
-    url: { name: 'dashboards-ecommerce' },
+    url: { name: 'dashboards-crm' },
   },
 ]
 

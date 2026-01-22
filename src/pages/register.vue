@@ -26,6 +26,10 @@ definePage({
   },
 })
 
+const router = useRouter()
+
+const refVForm = ref<VForm>()
+
 const form = ref({
   username: '',
   email: '',
@@ -33,7 +37,51 @@ const form = ref({
   privacyPolicies: false,
 })
 
+const errors = ref<Record<string, string | undefined>>({
+  username: undefined,
+  email: undefined,
+  password: undefined,
+})
+
 const isPasswordVisible = ref(false)
+
+const register = async () => {
+  try {
+    errors.value = {
+      username: undefined,
+      email: undefined,
+      password: undefined,
+    }
+
+    await $api('/auth/register', {
+      method: 'POST',
+      body: {
+        email: form.value.email,
+        username: form.value.username,
+        password: form.value.password,
+        privacy_policy_accepted: form.value.privacyPolicies,
+      },
+      onResponseError({ response }) {
+        errors.value = response._data?.errors ?? {
+          email: response._data?.message ?? 'Registration failed',
+        }
+      },
+    })
+
+    await router.push({ name: 'login' })
+  }
+  catch (err) {
+    console.error(err)
+  }
+}
+
+const onSubmit = () => {
+  refVForm.value?.validate()
+    .then(({ valid: isValid }) => {
+      if (isValid)
+        register()
+    })
+}
 </script>
 
 <template>
@@ -97,7 +145,10 @@ const isPasswordVisible = ref(false)
         </VCardText>
 
         <VCardText>
-          <VForm @submit.prevent="() => {}">
+          <VForm
+            ref="refVForm"
+            @submit.prevent="onSubmit"
+          >
             <VRow>
               <!-- Username -->
               <VCol cols="12">
@@ -107,6 +158,7 @@ const isPasswordVisible = ref(false)
                   autofocus
                   label="Username"
                   placeholder="Johndoe"
+                  :error-messages="errors.username"
                 />
               </VCol>
 
@@ -118,6 +170,7 @@ const isPasswordVisible = ref(false)
                   label="Email"
                   type="email"
                   placeholder="johndoe@email.com"
+                  :error-messages="errors.email"
                 />
               </VCol>
 
@@ -131,6 +184,7 @@ const isPasswordVisible = ref(false)
                   :type="isPasswordVisible ? 'text' : 'password'"
                   autocomplete="password"
                   :append-inner-icon="isPasswordVisible ? 'tabler-eye-off' : 'tabler-eye'"
+                  :error-messages="errors.password"
                   @click:append-inner="isPasswordVisible = !isPasswordVisible"
                 />
 
@@ -139,6 +193,7 @@ const isPasswordVisible = ref(false)
                     id="privacy-policy"
                     v-model="form.privacyPolicies"
                     inline
+                    :rules="[requiredValidator]"
                   />
                   <VLabel
                     for="privacy-policy"

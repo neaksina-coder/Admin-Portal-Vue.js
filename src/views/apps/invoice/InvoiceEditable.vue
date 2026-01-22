@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import InvoiceProductEdit from './InvoiceProductEdit.vue'
-import type { InvoiceData, PurchasedProduct } from './types'
+import { ref } from 'vue'
 import type { Client } from '@db/apps/invoice/types'
 import { VNodeRenderer } from '@layouts/components/VNodeRenderer'
 import { themeConfig } from '@themeConfig'
+import InvoiceProductEdit from './InvoiceProductEdit.vue'
+import type { InvoiceData, PurchasedProduct } from './types'
 
 interface Props {
   data: InvoiceData
@@ -39,10 +40,17 @@ fetchClients()
 // 👉 Add item function
 const addItem = () => {
   emit('push', {
-    title: 'App Design',
-    cost: 24,
-    hours: 1,
-    description: 'Designed UI kit & app pages.',
+    id: null,
+    name: '',
+    sku: '',
+    description: '',
+    category: '',
+    price: 0,
+    cost: 0,
+    stock: 0,
+    unit: '',
+    status: 'active',
+    quantity: 1,
   })
 }
 
@@ -223,7 +231,7 @@ const removeProduct = (id: number) => {
     <div class="add-products-form">
       <div
         v-for="(product, index) in props.data.purchasedProducts"
-        :key="product.title"
+        :key="index"
         class="mb-4"
       >
         <InvoiceProductEdit

@@ -21,20 +21,24 @@ export default [
   //   to: 'apps-kanban',
   // },
 
-  // {
-  //   title: 'User',
-  //   icon: { icon: 'tabler-user' },
-  //   children: [
-  //     { title: 'List', to: 'apps-user-list' },
-  //     { title: 'View', to: { name: 'apps-user-view-id', params: { id: 21 } } },
-  //   ],
-  // },
+  {
+    title: 'Users',
+    icon: { icon: 'tabler-users' },
+    action: 'read',
+    subject: 'Users',
+    children: [
+      { title: 'List', to: 'apps-user-list', action: 'read', subject: 'Users' },
+      { title: 'View', to: { name: 'apps-user-view-id', params: { id: 21 } }, action: 'read', subject: 'Users' },
+    ],
+  },
   {
     title: 'Roles & Permissions',
     icon: { icon: 'tabler-lock' },
+    action: 'manage',
+    subject: 'Roles',
     children: [
-      { title: 'Roles', to: 'apps-roles' },
-      { title: 'Permissions', to: 'apps-permissions' },
+      { title: 'Roles', to: 'apps-roles', action: 'manage', subject: 'Roles' },
+      { title: 'Permissions', to: 'apps-permissions', action: 'manage', subject: 'Permissions' },
     ],
   },
 

@@ -8,7 +8,7 @@ import type { InvoiceData, PurchasedProduct } from '@/views/apps/invoice/types'
 // 👉 Default Blank Data
 const invoiceData = ref<InvoiceData>({
   invoice: {
-    id: 5037,
+    id: 0,
     issuedDate: '',
     service: '',
     total: 0,
@@ -32,14 +32,7 @@ const invoiceData = ref<InvoiceData>({
     iban: 'ETD95476213',
     swiftCode: 'BR91905',
   },
-  purchasedProducts: [
-    {
-      title: '',
-      cost: 0,
-      hours: 0,
-      description: '',
-    },
-  ],
+  purchasedProducts: [],
   note: '',
   paymentMethod: '',
   salesperson: '',

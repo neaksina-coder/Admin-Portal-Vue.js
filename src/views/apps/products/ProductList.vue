@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import ProductFormDialog from './ProductFormDialog.vue'
 
 // Types
 interface Product {
@@ -130,6 +131,10 @@ const snackbar = ref(false)
 const snackbarText = ref('')
 const snackbarColor = ref('success')
 
+const isFormDialogVisible = ref(false)
+const isEditMode = ref(false)
+const editingProduct = ref<Product | null>(null)
+
 // Options
 const categories = [
   { title: 'All Categories', value: 'all' },
@@ -144,16 +149,6 @@ const statuses = [
   { title: 'Active', value: 'active' },
   { title: 'Inactive', value: 'inactive' },
   { title: 'Discontinued', value: 'discontinued' },
-]
-
-const unitOptions = [
-  { title: 'Hour', value: 'hour' },
-  { title: 'Day', value: 'day' },
-  { title: 'Month', value: 'month' },
-  { title: 'Year', value: 'year' },
-  { title: 'Piece', value: 'piece' },
-  { title: 'License', value: 'license' },
-  { title: 'User', value: 'user' },
 ]
 
 // Computed
@@ -202,11 +197,6 @@ const resolveCategoryColor = (category: string) => {
   return 'secondary'
 }
 
-const calculateMargin = (price: number, cost: number) => {
-  if (price === 0) return '0'
-  return ((price - cost) / price * 100).toFixed(1)
-}
-
 // Delete Product
 const confirmDelete = (id: number) => {
   deleteId.value = id
@@ -222,17 +212,46 @@ const deleteProduct = () => {
     showSnackbar('Product deleted successfully!', 'error')
   }
 }
+
+const openAddDialog = () => {
+  isEditMode.value = false
+  editingProduct.value = null
+  isFormDialogVisible.value = true
+}
+
+const openEditDialog = (product: Product) => {
+  isEditMode.value = true
+  editingProduct.value = { ...product }
+  isFormDialogVisible.value = true
+}
+
+const handleSave = (productData: Product) => {
+  if (isEditMode.value) {
+    // Update existing product
+    const index = products.value.findIndex(p => p.id === productData.id)
+    if (index !== -1) {
+      products.value[index] = { ...productData }
+      showSnackbar('Product updated successfully!')
+    }
+  } else {
+    // Add new product
+    const newId = Math.max(...products.value.map(p => p.id)) + 1
+    products.value.unshift({ ...productData, id: newId, createdAt: new Date().toISOString().slice(0, 10) })
+    showSnackbar('Product added successfully!')
+  }
+  saveProducts()
+}
 </script>
 
 <template>
   <section>
-    <VAlert
+    <!-- <VAlert
       variant="tonal"
       color="info"
       class="mb-4"
     >
       ProductList.vue component loaded.
-    </VAlert>
+    </VAlert> -->
     <VCard title="Products & Services">
       <VCardText>
         <VRow>
@@ -263,7 +282,7 @@ const deleteProduct = () => {
           <VCol cols="12" md="2" class="d-flex align-center justify-end">
             <VBtn
               prepend-icon="tabler-plus"
-              :to="{ name: 'apps-products-add' }"
+              @click="openAddDialog"
             >
               Add Product
             </VBtn>
@@ -335,7 +354,7 @@ const deleteProduct = () => {
             variant="text"
             color="default"
             size="x-small"
-            :to="{ name: 'apps-products-edit-id', params: { id: item.id } }"
+            @click="openEditDialog(item)"
           >
             <VIcon icon="tabler-edit" :size="22" />
           </VBtn>
@@ -377,6 +396,14 @@ const deleteProduct = () => {
         </VCardActions>
       </VCard>
     </VDialog>
+
+    <!-- Form Dialog -->
+    <ProductFormDialog
+      v-model="isFormDialogVisible"
+      :is-edit="isEditMode"
+      :product="editingProduct"
+      @save="handleSave"
+    />
 
     <!-- Snackbar -->
     <VSnackbar

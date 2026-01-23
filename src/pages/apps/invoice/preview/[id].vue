@@ -1,12 +1,20 @@
 <script setup lang="ts">
 import { VNodeRenderer } from '@layouts/components/VNodeRenderer'
 import { themeConfig } from '@themeConfig'
+import { database } from '@db/apps/invoice/db'
 
 // Components
 import InvoiceAddPaymentDrawer from '@/views/apps/invoice/InvoiceAddPaymentDrawer.vue'
 import InvoiceSendInvoiceDrawer from '@/views/apps/invoice/InvoiceSendInvoiceDrawer.vue'
 
 const route = useRoute('apps-invoice-preview-id')
+
+definePage({
+  meta: {
+    action: 'read',
+    subject: 'Apps',
+  },
+})
 
 const isAddPaymentSidebarVisible = ref(false)
 const isSendPaymentSidebarVisible = ref(false)
@@ -18,6 +26,19 @@ const paymentDetails = ref()
 if (invoiceData.value) {
   invoice.value = invoiceData.value.invoice
   paymentDetails.value = invoiceData.value.paymentDetails
+}
+else {
+  const fallbackInvoice = database.find(e => e.id === Number(route.params.id))
+  if (fallbackInvoice) {
+    invoice.value = fallbackInvoice
+    paymentDetails.value = {
+      totalDue: '$12,110.55',
+      bankName: 'American Bank',
+      country: 'United States',
+      iban: 'ETD95476213874685',
+      swiftCode: 'BR91905',
+    }
+  }
 }
 
 // 👉 Invoice Description

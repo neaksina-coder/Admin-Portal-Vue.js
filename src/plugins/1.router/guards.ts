@@ -19,7 +19,7 @@ export const setupGuards = (router: _RouterTyped<RouteNamedMap & { [key: string]
     const userData = useCookie('userData').value as { role?: string } | null
     const accessToken = useCookie('accessToken').value
     const isLoggedIn = !!(userData && accessToken)
-    const role = userData?.role
+    const role = (userData?.role || '').toLowerCase()
     const defaultRoute = role === 'user' ? { name: 'front-pages-landing-page' } : { name: 'dashboards-crm' }
 
     /*

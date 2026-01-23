@@ -15,6 +15,13 @@ interface InvoiceItem {
   price: number
 }
 
+definePage({
+  meta: {
+    action: 'read',
+    subject: 'Apps',
+  },
+})
+
 const products = ref<Product[]>([])
 const selectedProduct = ref<Product | null>(null)
 const invoiceItems = ref<InvoiceItem[]>([])

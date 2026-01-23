@@ -5,9 +5,17 @@ import InvoiceSendInvoiceDrawer from '@/views/apps/invoice/InvoiceSendInvoiceDra
 
 // Type: Invoice data
 import type { InvoiceData, PurchasedProduct } from '@/views/apps/invoice/types'
+import { database } from '@db/apps/invoice/db'
 
 const invoiceData = ref<InvoiceData>()
 const route = useRoute('apps-invoice-edit-id')
+
+definePage({
+  meta: {
+    action: 'read',
+    subject: 'Apps',
+  },
+})
 
 // 👉 fetchInvoice
 
@@ -15,6 +23,27 @@ const { data: invoiceDetails } = await useApi<any>(`/apps/invoice/${route.params
 
 if (invoiceDetails.value) {
   invoiceData.value = invoiceDetails.value
+}
+else {
+  const fallbackInvoice = database.find(e => e.id === Number(route.params.id))
+  if (fallbackInvoice) {
+    invoiceData.value = {
+      invoice: fallbackInvoice,
+      paymentDetails: {
+        totalDue: '$12,110.55',
+        bankName: 'American Bank',
+        country: 'United States',
+        iban: 'ETD95476213874685',
+        swiftCode: 'BR91905',
+      },
+      purchasedProducts: [],
+      note: '',
+      paymentMethod: '',
+      salesperson: '',
+      thanksNote: '',
+    }
+  }
+}
 
 const addProduct = (value: PurchasedProduct) => {
   invoiceData.value?.purchasedProducts.push(value)

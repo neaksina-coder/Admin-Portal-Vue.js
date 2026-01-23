@@ -5,10 +5,13 @@ import EmailLeftSidebarContent from '@/views/apps/email/EmailLeftSidebarContent.
 import EmailView from '@/views/apps/email/EmailView.vue'
 import type { MoveEmailToAction } from '@/views/apps/email/useEmail'
 import { useEmail } from '@/views/apps/email/useEmail'
+import { db as emailDb } from '@db/apps/email/db'
 import type { Email, EmailLabel } from '@db/apps/email/types'
 
 definePage({
   meta: {
+    action: 'read',
+    subject: 'Apps',
     layoutWrapperClasses: 'layout-content-height-fixed',
   },
 })
@@ -48,8 +51,39 @@ const { data: emailData, execute: fetchEmails } = await useApi<any>(createUrl('/
   },
 }))
 
-const emails = computed<Email[]>(() => emailData.value.emails)
-const emailsMeta = computed(() => emailData.value.emailsMeta)
+const fallbackEmailData = computed(() => {
+  const queryLowered = q.value.toLowerCase()
+  const filter = () => 'filter' in route.params ? route.params.filter : 'inbox'
+  const label = () => 'label' in route.params ? route.params.label : ''
+
+  function isInFolder(email: Email) {
+    if (filter() === 'trashed')
+      return email.isDeleted
+    if (filter() === 'starred')
+      return email.isStarred && !email.isDeleted
+
+    return email.folder === (filter() || email.folder) && !email.isDeleted
+  }
+
+  const emails = emailDb.emails.filter(
+    email =>
+      (email.from.name.toLowerCase().includes(queryLowered) || email.subject.toLowerCase().includes(queryLowered))
+      && isInFolder(email)
+      && (label() ? email.labels.includes(label() as EmailLabel) : true),
+  )
+
+  const emailsMeta = {
+    inbox: emailDb.emails.filter(email => !email.isDeleted && !email.isRead && email.folder === 'inbox').length,
+    draft: emailDb.emails.filter(email => !email.isDeleted && email.folder === 'draft').length,
+    spam: emailDb.emails.filter(email => !email.isDeleted && !email.isRead && email.folder === 'spam').length,
+    star: emailDb.emails.filter(email => !email.isDeleted && email.isStarred).length,
+  }
+
+  return { emails, emailsMeta }
+})
+
+const emails = computed<Email[]>(() => emailData.value?.emails?.length ? emailData.value.emails : fallbackEmailData.value.emails)
+const emailsMeta = computed(() => emailData.value?.emailsMeta ?? fallbackEmailData.value.emailsMeta)
 
 const toggleSelectedEmail = (emailId: Email['id']) => {
   const emailIndex = selectedEmails.value.indexOf(emailId)

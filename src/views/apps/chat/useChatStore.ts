@@ -1,4 +1,5 @@
 import type { ActiveChat } from './useChat'
+import { db } from '@db/apps/chat/db'
 import type { ChatContact, ChatContactWithChat, ChatMessage, ChatOut } from '@db/apps/chat/types'
 
 interface State {
@@ -24,16 +25,38 @@ export const useChatStore = defineStore('chat', {
         },
       }))
 
-      if (error.value) {
-        console.log(error.value)
-      }
-      else {
-        const { chatsContacts, contacts, profileUser } = data.value
+      const buildFallback = () => {
+        const qLowered = (q || '').toLowerCase()
+        const chatsContacts: ChatContactWithChat[] = db.chats
+          .map(chat => {
+            const contact = JSON.parse(JSON.stringify((db.contacts.find(c => c.id === chat.userId) as ChatContact)))
 
-        this.chatsContacts = chatsContacts
-        this.contacts = contacts
-        this.profileUser = profileUser
+            contact.chat = { id: chat.id, unseenMsgs: chat.unseenMsgs, lastMessage: chat.messages.at(-1) }
+
+            return contact
+          })
+          .reverse()
+
+        this.chatsContacts = chatsContacts.filter(c => c.fullName.toLowerCase().includes(qLowered))
+        this.contacts = db.contacts.filter(c => c.fullName.toLowerCase().includes(qLowered))
+        this.profileUser = db.profileUser
       }
+
+      if (error.value || !data.value) {
+        buildFallback()
+        return
+      }
+
+      const { chatsContacts, contacts, profileUser } = data.value
+
+      if ((!chatsContacts || !chatsContacts.length) && (!contacts || !contacts.length)) {
+        buildFallback()
+        return
+      }
+
+      this.chatsContacts = chatsContacts
+      this.contacts = contacts
+      this.profileUser = profileUser
     },
 
     async getChat(userId: ChatContact['id']) {

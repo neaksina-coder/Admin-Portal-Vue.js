@@ -21,6 +21,12 @@ const page = ref(1)
 const sortBy = ref()
 const orderBy = ref()
 const selectedRows = ref([])
+const snackbar = ref(false)
+const snackbarText = ref('')
+const snackbarColor = ref('success')
+const router = useRouter()
+const isDeleteDialogVisible = ref(false)
+const pendingDeleteUserId = ref<number | null>(null)
 
 // Update data table options
 const updateOptions = (options: any) => {
@@ -39,7 +45,7 @@ const headers = [
 ]
 
 // 👉 Fetching users
-const { data: usersData, execute: fetchUsers } = await useApi<any>(createUrl('/apps/users', {
+const { data: usersData, execute: fetchUsers } = await useApi<any>(createUrl('/users', {
   query: {
     q: searchQuery,
     status: selectedStatus,
@@ -52,8 +58,13 @@ const { data: usersData, execute: fetchUsers } = await useApi<any>(createUrl('/a
   },
 }))
 
-const users = computed((): UserProperties[] => usersData.value.users)
-const totalUsers = computed(() => usersData.value.totalUsers)
+const users = computed((): UserProperties[] => (usersData.value?.users ?? []).map((u: any) => ({
+  ...u,
+  currentPlan: u.currentPlan ?? u.plan ?? '',
+  billing: u.billing ?? '',
+  status: u.status ?? '',
+})))
+const totalUsers = computed(() => usersData.value?.totalUsers ?? 0)
 
 // 👉 search filters
 const roles = [
@@ -106,22 +117,42 @@ const resolveUserStatusVariant = (stat: string) => {
   return 'primary'
 }
 
+const showSnackbar = (text: string, color: string = 'success') => {
+  snackbarText.value = text
+  snackbarColor.value = color
+  snackbar.value = true
+}
+
+const goToEdit = (id: number) => {
+  router.push({ name: 'apps-user-view-id', params: { id }, query: { edit: '1' } })
+}
+
+const openDeleteDialog = (id: number) => {
+  pendingDeleteUserId.value = id
+  isDeleteDialogVisible.value = true
+}
+
 const isAddNewUserDrawerVisible = ref(false)
 
 // 👉 Add new user
 const addNewUser = async (userData: UserProperties) => {
-  await $api('/apps/users', {
-    method: 'POST',
-    body: userData,
-  })
+  try {
+    await $api('/users', {
+      method: 'POST',
+      body: userData,
+    })
 
-  // Refetch User
-  fetchUsers()
+    showSnackbar('User created successfully.')
+    fetchUsers()
+  }
+  catch (error) {
+    showSnackbar('Failed to create user.', 'error')
+  }
 }
 
 // 👉 Delete user
 const deleteUser = async (id: number) => {
-  await $api(`/apps/users/${id}`, {
+  await $api(`/users/${id}`, {
     method: 'DELETE',
   })
 
@@ -133,6 +164,15 @@ const deleteUser = async (id: number) => {
   // refetch User
   // TODO: Make this async
   fetchUsers()
+}
+
+const onDeleteConfirm = async (confirmed: boolean) => {
+  if (!confirmed || pendingDeleteUserId.value === null)
+    return
+
+  await deleteUser(pendingDeleteUserId.value)
+  pendingDeleteUserId.value = null
+  showSnackbar('User deleted successfully.')
 }
 
 const widgetData = ref([
@@ -375,7 +415,7 @@ const widgetData = ref([
 
         <!-- Actions -->
         <template #item.actions="{ item }">
-          <IconBtn @click="deleteUser(item.id)">
+          <IconBtn @click="openDeleteDialog(item.id)">
             <VIcon icon="tabler-trash" />
           </IconBtn>
 
@@ -399,14 +439,14 @@ const widgetData = ref([
                   <VListItemTitle>View</VListItemTitle>
                 </VListItem>
 
-                <VListItem link>
+                <VListItem @click="goToEdit(item.id)">
                   <template #prepend>
                     <VIcon icon="tabler-pencil" />
                   </template>
                   <VListItemTitle>Edit</VListItemTitle>
                 </VListItem>
 
-                <VListItem @click="deleteUser(item.id)">
+                <VListItem @click="openDeleteDialog(item.id)">
                   <template #prepend>
                     <VIcon icon="tabler-trash" />
                   </template>
@@ -433,5 +473,22 @@ const widgetData = ref([
       v-model:is-drawer-open="isAddNewUserDrawerVisible"
       @user-data="addNewUser"
     />
+    <ConfirmDialog
+      v-model:is-dialog-visible="isDeleteDialogVisible"
+      confirmation-question="Are you sure you want to delete this user?"
+      confirm-title="Deleted!"
+      confirm-msg="User has been deleted successfully."
+      cancel-title="Cancelled"
+      cancel-msg="User deletion cancelled."
+      @confirm="onDeleteConfirm"
+    />
+    <VSnackbar
+      v-model="snackbar"
+      :color="snackbarColor"
+      :timeout="3000"
+      location="top"
+    >
+      {{ snackbarText }}
+    </VSnackbar>
   </section>
 </template>

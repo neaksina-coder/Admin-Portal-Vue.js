@@ -21,7 +21,7 @@ const userData = useCookie<any>('userData')
 const accessToken = useCookie<string>('accessToken')
 const userAbilityRules = useCookie('userAbilityRules')
 const isLoggedIn = computed(() => !!(userData.value && accessToken.value))
-const role = computed(() => userData.value?.role)
+const role = computed(() => (userData.value?.role || '').toLowerCase())
 const showAdminPortal = computed(() => isLoggedIn.value && role.value !== 'user')
 
 const sidebar = ref(false)

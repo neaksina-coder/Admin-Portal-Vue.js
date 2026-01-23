@@ -12,6 +12,7 @@ interface Props {
     contact: string
     email: string
     currentPlan: string
+    billing: string
     status: string
     avatar: string
     taskDone: number
@@ -19,9 +20,13 @@ interface Props {
     taxId: string
     language: string
   }
+  openEdit?: boolean
 }
 
 const props = defineProps<Props>()
+const emit = defineEmits<{
+  (e: 'update-user', value: Props['userData']): void
+}>()
 
 const standardPlan = {
   plan: 'Standard',
@@ -31,6 +36,15 @@ const standardPlan = {
 
 const isUserInfoEditDialogVisible = ref(false)
 const isUpgradePlanDialogVisible = ref(false)
+
+watch(
+  () => props.openEdit,
+  val => {
+    if (val)
+      isUserInfoEditDialogVisible.value = true
+  },
+  { immediate: true },
+)
 
 // 👉 Role variant resolver
 const resolveUserRoleVariant = (role: string) => {
@@ -46,6 +60,10 @@ const resolveUserRoleVariant = (role: string) => {
     return { color: 'secondary', icon: 'tabler-server-2' }
 
   return { color: 'primary', icon: 'tabler-user' }
+}
+
+const onSubmitUserInfo = (updatedUser: Props['userData']) => {
+  emit('update-user', updatedUser)
 }
 </script>
 
@@ -346,6 +364,7 @@ const resolveUserRoleVariant = (role: string) => {
   <UserInfoEditDialog
     v-model:is-dialog-visible="isUserInfoEditDialogVisible"
     :user-data="props.userData"
+    @submit="onSubmitUserInfo"
   />
 
   <!-- 👉 Upgrade plan dialog -->

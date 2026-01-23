@@ -8,6 +8,8 @@ export default [
         title: 'Chat',
         icon: { icon: 'tabler-message-circle' },
         to: 'apps-chat',
+        action: 'read',
+        subject: 'Apps',
       },
       {
         title: 'Calendar',
@@ -22,11 +24,13 @@ export default [
       {
         title: 'Invoice',
         icon: { icon: 'tabler-file-dollar' },
+        action: 'read',
+        subject: 'Apps',
         children: [
-          { title: 'List', to: 'apps-invoice-list' },
-          { title: 'Preview', to: { name: 'apps-invoice-preview-id', params: { id: '5036' } } },
-          { title: 'Edit', to: { name: 'apps-invoice-edit-id', params: { id: '5036' } } },
-          { title: 'Add', to: 'apps-invoice-add' },
+          { title: 'List', to: 'apps-invoice-list', action: 'read', subject: 'Apps' },
+          { title: 'Preview', to: { name: 'apps-invoice-preview-id', params: { id: '5036' } }, action: 'read', subject: 'Apps' },
+          { title: 'Edit', to: { name: 'apps-invoice-edit-id', params: { id: '5036' } }, action: 'read', subject: 'Apps' },
+          { title: 'Add', to: 'apps-invoice-add', action: 'read', subject: 'Apps' },
         ],
       },
       {
@@ -36,7 +40,8 @@ export default [
         subject: 'Users',
         children: [
           { title: 'List', to: 'apps-user-list', action: 'read', subject: 'Users' },
-          { title: 'View', to: { name: 'apps-user-view-id', params: { id: 21 } }, action: 'read', subject: 'Users' },
+          // { title: 'View', to: { name: 'apps-user-view-id', params: { id: 21 } }, action: 'read', subject: 'Users' },
+          { title: 'Create Admin', to: 'apps-admins-create', action: 'manage', subject: 'Admins' },
         ],
       },
       {

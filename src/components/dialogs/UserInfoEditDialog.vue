@@ -9,6 +9,7 @@ interface UserData {
   contact: string | undefined
   email: string | undefined
   currentPlan: string
+  billing: string
   status: string | undefined
   avatar: string
   taskDone: number | null
@@ -38,6 +39,7 @@ const props = withDefaults(defineProps<Props>(), {
     contact: '',
     email: '',
     currentPlan: '',
+    billing: '',
     status: '',
     avatar: '',
     taskDone: null,
@@ -51,12 +53,21 @@ const emit = defineEmits<Emit>()
 
 const userData = ref<UserData>(structuredClone(toRaw(props.userData)))
 const isUseAsBillingAddress = ref(false)
+const firstName = ref('')
+const lastName = ref('')
 
 watch(() => props, () => {
   userData.value = structuredClone(toRaw(props.userData))
+  const fullName = userData.value.fullName || ''
+  const [first = '', ...rest] = fullName.split(' ')
+  firstName.value = first
+  lastName.value = rest.join(' ')
 })
 
 const onFormSubmit = () => {
+  userData.value.fullName = `${firstName.value} ${lastName.value}`.trim()
+  if (userData.value.status)
+    userData.value.status = userData.value.status.toLowerCase()
   emit('update:isDialogVisible', false)
   emit('submit', userData.value)
 }
@@ -103,7 +114,7 @@ const dialogModelValueUpdate = (val: boolean) => {
               md="6"
             >
               <AppTextField
-                v-model="userData.fullName.split(' ')[0]"
+                v-model="firstName"
                 label="First Name"
                 placeholder="John"
               />
@@ -115,7 +126,7 @@ const dialogModelValueUpdate = (val: boolean) => {
               md="6"
             >
               <AppTextField
-                v-model="userData.fullName.split(' ')[1]"
+                v-model="lastName"
                 label="Last Name"
                 placeholder="Doe"
               />
@@ -151,7 +162,7 @@ const dialogModelValueUpdate = (val: boolean) => {
                 v-model="userData.status"
                 label="Status"
                 placeholder="Active"
-                :items="['Active', 'Inactive', 'Pending']"
+                :items="['active', 'inactive', 'pending']"
               />
             </VCol>
 

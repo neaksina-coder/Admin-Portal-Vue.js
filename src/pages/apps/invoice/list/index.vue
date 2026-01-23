@@ -1,7 +1,16 @@
 <script setup lang="ts">
 import type { Invoice } from '@db/apps/invoice/types'
+import { database } from '@db/apps/invoice/db'
+import { paginateArray } from '@api-utils/paginateArray'
 
 type invoiceStatus = 'Downloaded' | 'Draft' | 'Paid' | 'Sent' | 'Partial Payment' | 'Past Due' | null
+
+definePage({
+  meta: {
+    action: 'read',
+    subject: 'Apps',
+  },
+})
 
 const searchQuery = ref('')
 const selectedStatus = ref<invoiceStatus>(null)
@@ -49,8 +58,72 @@ const { data: invoiceData, execute: fetchInvoices } = await useApi<any>(createUr
   },
 }))
 
-const invoices = computed((): Invoice[] => invoiceData.value ? invoiceData.value.invoices : [])
-const totalInvoices = computed(() => invoiceData.value ? invoiceData.value.totalInvoices : 0)
+const fallbackInvoiceData = computed(() => {
+  const queryLowered = (searchQuery.value ?? '').toString().toLowerCase()
+  const status = selectedStatus.value
+
+  let filteredInvoices = database.filter(
+    invoice => (
+      (
+        invoice.client.name.toLowerCase().includes(queryLowered)
+        || invoice.client.companyEmail.toLowerCase().includes(queryLowered)
+        || invoice.id.toString().includes(queryLowered)
+      )
+      && invoice.invoiceStatus === (status || invoice.invoiceStatus)
+    ),
+  ).reverse()
+
+  if (sortBy.value) {
+    if (sortBy.value === 'client') {
+      filteredInvoices = filteredInvoices.sort((a, b) => {
+        if (orderBy.value === 'asc')
+          return a.client.name.localeCompare(b.client.name)
+
+        return b.client.name.localeCompare(a.client.name)
+      })
+    }
+    else if (sortBy.value === 'total') {
+      filteredInvoices = filteredInvoices.sort((a, b) => {
+        if (orderBy.value === 'asc')
+          return a.total - b.total
+
+        return b.total - a.total
+      })
+    }
+    else if (sortBy.value === 'id') {
+      filteredInvoices = filteredInvoices.sort((a, b) => {
+        if (orderBy.value === 'asc')
+          return a.id - b.id
+
+        return b.id - a.id
+      })
+    }
+    else if (sortBy.value === 'date') {
+      filteredInvoices = filteredInvoices.sort((a, b) => {
+        if (orderBy.value === 'asc')
+          return new Date(a.issuedDate).getTime() - new Date(b.issuedDate).getTime()
+
+        return new Date(b.issuedDate).getTime() - new Date(a.issuedDate).getTime()
+      })
+    }
+    else if (sortBy.value === 'balance') {
+      filteredInvoices = filteredInvoices.sort((a, b) => {
+        if (orderBy.value === 'asc')
+          return a.balance - b.balance
+
+        return b.balance - a.balance
+      })
+    }
+  }
+
+  const totalInvoices = filteredInvoices.length
+  const invoices = paginateArray(filteredInvoices, itemsPerPage.value, page.value)
+
+  return { invoices, totalInvoices }
+})
+
+const invoices = computed((): Invoice[] => invoiceData.value?.invoices?.length ? invoiceData.value.invoices : fallbackInvoiceData.value.invoices)
+const totalInvoices = computed(() => invoiceData.value?.totalInvoices ?? fallbackInvoiceData.value.totalInvoices)
 
 // 👉 Invoice balance variant resolver
 const resolveInvoiceBalanceVariant = (balance: string | number, total: number) => {

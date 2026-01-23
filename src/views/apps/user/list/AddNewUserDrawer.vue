@@ -20,7 +20,6 @@ const emit = defineEmits<Emit>()
 const isFormValid = ref(false)
 const refForm = ref<VForm>()
 const fullName = ref('')
-const userName = ref('')
 const email = ref('')
 const company = ref('')
 const country = ref()
@@ -28,6 +27,10 @@ const contact = ref('')
 const role = ref()
 const plan = ref()
 const status = ref()
+const password = ref('')
+
+const currentRole = computed(() => (useCookie<any>('userData').value?.role || '').toLowerCase())
+const roleOptions = computed(() => (currentRole.value === 'superuser' ? ['user', 'admin'] : ['user']))
 
 // 👉 drawer close
 const closeNavigationDrawer = () => {
@@ -43,17 +46,13 @@ const onSubmit = () => {
   refForm.value?.validate().then(({ valid }) => {
     if (valid) {
       emit('userData', {
-        id: 0,
         fullName: fullName.value,
-        company: company.value,
-        role: role.value,
-        country: country.value,
-        contact: contact.value,
         email: email.value,
-        currentPlan: plan.value,
-        status: status.value,
-        avatar: '',
+        password: password.value,
+        role: role.value,
+        plan: plan.value,
         billing: 'Auto Debit',
+        status: status.value,
       })
       emit('update:isDrawerOpen', false)
       nextTick(() => {
@@ -110,10 +109,10 @@ const handleDrawerModelValueUpdate = (val: boolean) => {
               <!-- 👉 Username -->
               <VCol cols="12">
                 <AppTextField
-                  v-model="userName"
+                  v-model="company"
                   :rules="[requiredValidator]"
-                  label="Username"
-                  placeholder="Johndoe"
+                  label="Company"
+                  placeholder="Acme"
                 />
               </VCol>
 
@@ -124,16 +123,6 @@ const handleDrawerModelValueUpdate = (val: boolean) => {
                   :rules="[requiredValidator, emailValidator]"
                   label="Email"
                   placeholder="johndoe@email.com"
-                />
-              </VCol>
-
-              <!-- 👉 company -->
-              <VCol cols="12">
-                <AppTextField
-                  v-model="company"
-                  :rules="[requiredValidator]"
-                  label="Company"
-                  placeholder="PixInvent"
                 />
               </VCol>
 
@@ -166,7 +155,7 @@ const handleDrawerModelValueUpdate = (val: boolean) => {
                   label="Select Role"
                   placeholder="Select Role"
                   :rules="[requiredValidator]"
-                  :items="['Admin', 'Author', 'Editor', 'Maintainer', 'Subscriber']"
+                  :items="roleOptions"
                 />
               </VCol>
 
@@ -178,6 +167,18 @@ const handleDrawerModelValueUpdate = (val: boolean) => {
                   placeholder="Select Plan"
                   :rules="[requiredValidator]"
                   :items="['Basic', 'Company', 'Enterprise', 'Team']"
+                />
+              </VCol>
+
+              <!-- 👉 Password -->
+              <VCol cols="12">
+                <AppTextField
+                  v-model="password"
+                  :rules="[requiredValidator]"
+                  label="Password"
+                  placeholder="••••••••••••"
+                  type="password"
+                  autocomplete="new-password"
                 />
               </VCol>
 

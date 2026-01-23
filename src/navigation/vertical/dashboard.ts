@@ -35,10 +35,12 @@ export default [
   //     },
   //   ],
   // },
-    {
+  {
     title: 'Invoice',
     to: 'apps-invoice-list', // single link
     icon: { icon: 'tabler-file-dollar' },
+    action: 'read',
+    subject: 'Apps',
   },
     {
     title: 'Products & Services',
@@ -51,11 +53,15 @@ export default [
     title: 'Chat',
     icon: { icon: 'tabler-message-circle-2' },
     to: 'apps-chat',
+    action: 'read',
+    subject: 'Apps',
   },
    {
         title: 'Email',
         icon: { icon: 'tabler-mail' },
         to: 'apps-email',
+        action: 'read',
+        subject: 'Apps',
       },
   {
     title: 'Calendar',

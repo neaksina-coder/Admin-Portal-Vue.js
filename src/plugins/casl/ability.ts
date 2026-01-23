@@ -6,6 +6,7 @@ export type Actions = 'create' | 'read' | 'update' | 'delete' | 'manage'
 export type Subjects =
   | 'Post'
   | 'Comment'
+  | 'Apps'
   | 'Products'
   | 'Categories'
   | 'Users'

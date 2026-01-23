@@ -28,7 +28,8 @@ export default [
     subject: 'Users',
     children: [
       { title: 'List', to: 'apps-user-list', action: 'read', subject: 'Users' },
-      { title: 'View', to: { name: 'apps-user-view-id', params: { id: 21 } }, action: 'read', subject: 'Users' },
+      // { title: 'View', to: { name: 'apps-user-view-id', params: { id: 21 } }, action: 'read', subject: 'Users' },
+      { title: 'Create Admin', to: 'apps-admins-create', action: 'manage', subject: 'Admins' },
     ],
   },
   {

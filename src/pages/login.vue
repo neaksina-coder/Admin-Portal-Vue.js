@@ -64,15 +64,17 @@ const login = async () => {
       },
     })
 
-    const accessToken = res.token
+    const accessToken = res.token ?? res.access_token ?? res?.data?.token
     const userData = res.user
-    const role = userData?.role
+    const role = (userData?.role || '').toLowerCase()
     const roleAbilityMap: Record<string, { action: 'manage' | 'read' | 'create' | 'update' | 'delete'; subject: 'Products' | 'Categories' | 'Users' | 'Roles' | 'Permissions' | 'Admins' | 'all' }[]> = {
       user: [
+        { action: 'read', subject: 'Apps' },
         { action: 'read', subject: 'Products' },
         { action: 'read', subject: 'Categories' },
       ],
       admin: [
+        { action: 'read', subject: 'Apps' },
         { action: 'read', subject: 'Products' },
         { action: 'create', subject: 'Products' },
         { action: 'update', subject: 'Products' },
@@ -92,8 +94,11 @@ const login = async () => {
     useCookie('userAbilityRules').value = userAbilityRules
     ability.update(userAbilityRules)
 
-    useCookie('userData').value = userData
-    useCookie('accessToken').value = accessToken
+    useCookie('userData').value = { ...userData, role }
+    if (!accessToken)
+      throw new Error('Missing access token from login response')
+
+    useCookie('accessToken').value = String(accessToken)
 
     // Redirect to `to` query if exist or redirect to index route
     // ❗ nextTick is required to wait for DOM updates and later redirect

@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue';
-
 const props = defineProps<{
   id?: string
   isEdit?: boolean
@@ -9,26 +7,34 @@ const props = defineProps<{
 
 const emit = defineEmits(['save', 'cancel'])
 
-const categories = [
-  { title: 'Services', value: 'services' },
-  { title: 'Software', value: 'software' },
-  { title: 'Hosting', value: 'hosting' },
-  { title: 'Subscriptions', value: 'subscriptions' },
-]
+const { data: categoriesData } = await useApi<any>(createUrl('/categories/', {
+  query: {
+    skip: 0,
+    limit: 100,
+  },
+}))
+
+const categories = computed(() => {
+  const data = categoriesData.value?.data ?? []
+  return [
+    { title: 'No Category', value: null },
+    ...data.map((category: any) => ({ title: category.name, value: category.id })),
+  ]
+})
 
 const units = ['hour', 'day', 'month', 'year', 'piece', 'license', 'user', 'gb']
 
 const statuses = [
   { title: 'Active', value: 'active' },
   { title: 'Inactive', value: 'inactive' },
-  { title: 'Discontinued', value: 'discontinued' },
 ]
 
 const formData = ref({
+  id: undefined as number | undefined,
   name: '',
   sku: '',
   description: '',
-  category: 'services',
+  category_id: null as number | null,
   price: 0,
   cost: 0,
   stock: 0,
@@ -38,30 +44,23 @@ const formData = ref({
 
 watch(() => props.productData, (val) => {
   if (val) {
-    formData.value = { ...val }
+    formData.value = {
+      id: val.id,
+      name: val.name ?? '',
+      sku: val.sku ?? '',
+      description: val.description ?? '',
+      category_id: val.category_id ?? val.category?.id ?? null,
+      price: val.price ?? 0,
+      cost: val.cost ?? 0,
+      stock: val.stock ?? 0,
+      unit: val.unit ?? 'hour',
+      status: val.status ?? 'active',
+    }
   }
 }, { immediate: true })
 
-
-onMounted(() => {
-  if (props.isEdit && props.id) {
-    // Simulate fetch
-    formData.value = {
-      name: 'Professional Services Package',
-      sku: 'SRV-001',
-      description: 'Monthly professional consulting services',
-      category: 'services',
-      price: 2500,
-      cost: 1200,
-      stock: 999,
-      unit: 'hour',
-      status: 'active',
-    }
-  }
-})
-
 const saveProduct = () => {
-  emit('save', formData.value)
+  emit('save', { ...formData.value })
 }
 
 const cancelForm = () => {
@@ -76,13 +75,13 @@ const cancelForm = () => {
         <VCardText>
           <VRow>
             <VCol cols="12" md="8">
-              <VTextField v-model="formData.name" label="Product Name" placeholder="e.g. Professional Services" />
+              <VTextField v-model="formData.name" label="Product Name" placeholder="e.g. Coca Cola" />
             </VCol>
             <VCol cols="12" md="4">
-              <VTextField v-model="formData.sku" label="SKU" placeholder="e.g. SRV-001" />
+              <VTextField v-model="formData.sku" label="SKU" placeholder="e.g. SKU-001" />
             </VCol>
             <VCol cols="12" md="6">
-              <VSelect v-model="formData.category" :items="categories" label="Category" />
+              <VSelect v-model="formData.category_id" :items="categories" label="Category" />
             </VCol>
             <VCol cols="12" md="6">
               <VSelect v-model="formData.status" :items="statuses" label="Status" />
@@ -98,6 +97,9 @@ const cancelForm = () => {
             </VCol>
             <VCol cols="12" md="4">
               <VTextField v-model.number="formData.stock" label="Stock Quantity" type="number" />
+            </VCol>
+            <VCol cols="12" md="6">
+              <VSelect v-model="formData.unit" :items="units" label="Unit" />
             </VCol>
           </VRow>
         </VCardText>

@@ -1,3 +1,15 @@
+const userData = useCookie<any>('userData')
+const isSuperuser = userData.value?.role === 'superuser'
+
+const usersNavItem = {
+  title: 'Users',
+  icon: { icon: 'tabler-users' },
+  to: 'apps-user-list',
+  action: 'read',
+  subject: 'Users',
+}
+
+
 export default [
   // { heading: 'Apps & Pages' },
   // // {
@@ -21,27 +33,7 @@ export default [
   //   to: 'apps-kanban',
   // },
 
-  {
-    title: 'Users',
-    icon: { icon: 'tabler-users' },
-    action: 'read',
-    subject: 'Users',
-    children: [
-      { title: 'List', to: 'apps-user-list', action: 'read', subject: 'Users' },
-      // { title: 'View', to: { name: 'apps-user-view-id', params: { id: 21 } }, action: 'read', subject: 'Users' },
-      { title: 'Create Admin', to: 'apps-admins-create', action: 'manage', subject: 'Admins' },
-    ],
-  },
-  {
-    title: 'Roles & Permissions',
-    icon: { icon: 'tabler-lock' },
-    action: 'manage',
-    subject: 'Roles',
-    children: [
-      { title: 'Roles', to: 'apps-roles', action: 'manage', subject: 'Roles' },
-      { title: 'Permissions', to: 'apps-permissions', action: 'manage', subject: 'Permissions' },
-    ],
-  },
+  usersNavItem,
 
   {
     title: 'Pages',

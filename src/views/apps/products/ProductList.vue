@@ -1,116 +1,30 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
 import ProductFormDialog from './ProductFormDialog.vue'
 
-// Types
+interface Category {
+  id: number
+  name: string
+  slug: string
+  description?: string | null
+  status: string
+  created_at: string
+}
+
 interface Product {
   id: number
   name: string
   sku: string
-  description: string
-  category: string
+  description?: string | null
+  category_id?: number | null
+  category?: Category | null
   price: number
-  cost: number
+  cost?: number | null
   stock: number
-  unit: string
-  status: 'active' | 'inactive' | 'discontinued'
-  createdAt: string
+  unit?: string | null
+  status: string
+  created_at: string
 }
 
-// LocalStorage key
-const STORAGE_KEY = 'products_catalog'
-
-// Load products from localStorage
-const loadProducts = (): Product[] => {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY)
-    if (saved) {
-      return JSON.parse(saved)
-    }
-  } catch (error) {
-    console.error('Error loading products:', error)
-  }
-  
-  // Default products
-  return [
-    {
-      id: 1,
-      name: 'Professional Services Package',
-      sku: 'SRV-001',
-      description: 'Monthly professional consulting services',
-      category: 'services',
-      price: 2500,
-      cost: 1200,
-      stock: 999,
-      unit: 'hour',
-      status: 'active',
-      createdAt: '2024-01-01',
-    },
-    {
-      id: 2,
-      name: 'Cloud Hosting Plan',
-      sku: 'HOST-001',
-      description: 'Premium cloud hosting with 99.9% uptime',
-      category: 'hosting',
-      price: 99.00,
-      cost: 45.00,
-      stock: 999,
-      unit: 'month',
-      status: 'active',
-      createdAt: '2024-01-02',
-    },
-    {
-      id: 3,
-      name: 'Software License',
-      sku: 'LIC-001',
-      description: 'Annual enterprise software license',
-      category: 'software',
-      price: 1200.00,
-      cost: 600.00,
-      stock: 50,
-      unit: 'license',
-      status: 'active',
-      createdAt: '2024-01-03',
-    },
-    {
-      id: 4,
-      name: 'Technical Support',
-      sku: 'SUP-001',
-      description: '24/7 technical support service',
-      category: 'services',
-      price: 800.00,
-      cost: 350.00,
-      stock: 999,
-      unit: 'month',
-      status: 'active',
-      createdAt: '2024-01-04',
-    },
-    {
-      id: 5,
-      name: 'Custom Development',
-      sku: 'DEV-001',
-      description: 'Custom software development',
-      category: 'services',
-      price: 175.00,
-      cost: 85.00,
-      stock: 999,
-      unit: 'hour',
-      status: 'active',
-      createdAt: '2024-01-05',
-    },
-  ]
-}
-
-// Save products to localStorage
-const saveProducts = () => {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(products.value))
-  } catch (error) {
-    console.error('Error saving products:', error)
-  }
-}
-
-// Headers for VDataTable
 const headers = [
   { title: 'PRODUCT', key: 'name' },
   { title: 'CATEGORY', key: 'category' },
@@ -120,11 +34,58 @@ const headers = [
   { title: 'ACTIONS', key: 'actions', sortable: false },
 ]
 
-// State
-const products = ref<Product[]>(loadProducts())
 const searchQuery = ref('')
-const selectedCategory = ref('all')
-const selectedStatus = ref('all')
+const selectedCategory = ref<'all' | number>('all')
+const selectedStatus = ref<'all' | string>('all')
+const itemsPerPage = ref(20)
+const page = ref(1)
+
+const skip = computed(() => (page.value - 1) * itemsPerPage.value)
+const limit = computed(() => itemsPerPage.value)
+
+const { data: categoriesData, execute: fetchCategories } = await useApi<any>(createUrl('/categories/', {
+  query: {
+    skip: 0,
+    limit: 100,
+  },
+}))
+
+const { data: productsData, execute: fetchProducts } = await useApi<any>(createUrl('/products/', {
+  query: {
+    skip,
+    limit,
+    category_id: computed(() => (selectedCategory.value === 'all' ? undefined : selectedCategory.value)),
+    status: computed(() => (selectedStatus.value === 'all' ? undefined : selectedStatus.value)),
+  },
+}))
+
+const categories = computed(() => {
+  const apiCategories = (categoriesData.value?.data ?? []) as Category[]
+  return [
+    { title: 'All Categories', value: 'all' },
+    ...apiCategories.map(category => ({ title: category.name, value: category.id })),
+  ]
+})
+
+const statuses = [
+  { title: 'All Status', value: 'all' },
+  { title: 'Active', value: 'active' },
+  { title: 'Inactive', value: 'inactive' },
+]
+
+const products = computed((): Product[] => (productsData.value?.data ?? []))
+const totalProducts = computed(() => productsData.value?.total ?? 0)
+
+const filteredProducts = computed(() => {
+  const query = searchQuery.value.trim().toLowerCase()
+  if (!query)
+    return products.value
+
+  return products.value.filter(product =>
+    product.name.toLowerCase().includes(query) || product.sku.toLowerCase().includes(query),
+  )
+})
+
 const isDeleteDialogVisible = ref(false)
 const deleteId = ref<number | null>(null)
 const snackbar = ref(false)
@@ -135,40 +96,6 @@ const isFormDialogVisible = ref(false)
 const isEditMode = ref(false)
 const editingProduct = ref<Product | null>(null)
 
-// Options
-const categories = [
-  { title: 'All Categories', value: 'all' },
-  { title: 'Services', value: 'services' },
-  { title: 'Software', value: 'software' },
-  { title: 'Hosting', value: 'hosting' },
-  { title: 'Subscriptions', value: 'subscriptions' },
-]
-
-const statuses = [
-  { title: 'All Status', value: 'all' },
-  { title: 'Active', value: 'active' },
-  { title: 'Inactive', value: 'inactive' },
-  { title: 'Discontinued', value: 'discontinued' },
-]
-
-// Computed
-const filteredProducts = computed(() => {
-  return products.value.filter(product => {
-    const matchesSearch =
-      product.name.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-      product.sku.toLowerCase().includes(searchQuery.value.toLowerCase())
-
-    const matchesCategory =
-      selectedCategory.value === 'all' || product.category === selectedCategory.value
-
-    const matchesStatus =
-      selectedStatus.value === 'all' || product.status === selectedStatus.value
-
-    return matchesSearch && matchesCategory && matchesStatus
-  })
-})
-
-// Methods
 const showSnackbar = (text: string, color: string = 'success') => {
   snackbarText.value = text
   snackbarColor.value = color
@@ -185,7 +112,6 @@ const formatCurrency = (amount: number) => {
 const resolveStatusVariant = (status: string) => {
   if (status === 'active') return { color: 'success', text: 'Active' }
   if (status === 'inactive') return { color: 'secondary', text: 'Inactive' }
-  if (status === 'discontinued') return { color: 'error', text: 'Discontinued' }
   return { color: 'primary', text: status }
 }
 
@@ -197,19 +123,24 @@ const resolveCategoryColor = (category: string) => {
   return 'secondary'
 }
 
-// Delete Product
 const confirmDelete = (id: number) => {
   deleteId.value = id
   isDeleteDialogVisible.value = true
 }
 
-const deleteProduct = () => {
-  if (deleteId.value) {
-    products.value = products.value.filter(p => p.id !== deleteId.value)
-    saveProducts()
-    deleteId.value = null
-    isDeleteDialogVisible.value = false
+const deleteProduct = async () => {
+  if (!deleteId.value)
+    return
+
+  try {
+    await $api(`/products/${deleteId.value}`, { method: 'DELETE' })
     showSnackbar('Product deleted successfully!', 'error')
+    isDeleteDialogVisible.value = false
+    deleteId.value = null
+    fetchProducts()
+  }
+  catch (error) {
+    showSnackbar('Failed to delete product.', 'error')
   }
 }
 
@@ -225,33 +156,37 @@ const openEditDialog = (product: Product) => {
   isFormDialogVisible.value = true
 }
 
-const handleSave = (productData: Product) => {
-  if (isEditMode.value) {
-    // Update existing product
-    const index = products.value.findIndex(p => p.id === productData.id)
-    if (index !== -1) {
-      products.value[index] = { ...productData }
+const handleSave = async (productData: Product) => {
+  try {
+    if (isEditMode.value && productData.id) {
+      await $api(`/products/${productData.id}`, {
+        method: 'PUT',
+        body: productData,
+      })
       showSnackbar('Product updated successfully!')
     }
-  } else {
-    // Add new product
-    const newId = Math.max(...products.value.map(p => p.id)) + 1
-    products.value.unshift({ ...productData, id: newId, createdAt: new Date().toISOString().slice(0, 10) })
-    showSnackbar('Product added successfully!')
+    else {
+      await $api('/products/', {
+        method: 'POST',
+        body: productData,
+      })
+      showSnackbar('Product added successfully!')
+    }
+    fetchProducts()
+    fetchCategories()
   }
-  saveProducts()
+  catch (error) {
+    showSnackbar('Failed to save product.', 'error')
+  }
 }
+
+watch([selectedCategory, selectedStatus, page, itemsPerPage], () => {
+  fetchProducts()
+})
 </script>
 
 <template>
   <section>
-    <!-- <VAlert
-      variant="tonal"
-      color="info"
-      class="mb-4"
-    >
-      ProductList.vue component loaded.
-    </VAlert> -->
     <VCard title="Products & Services">
       <VCardText>
         <VRow>
@@ -290,10 +225,12 @@ const handleSave = (productData: Product) => {
         </VRow>
       </VCardText>
 
-      <VDataTable
+      <VDataTableServer
+        v-model:page="page"
+        v-model:items-per-page="itemsPerPage"
         :headers="headers"
         :items="filteredProducts"
-        :items-per-page="10"
+        :items-length="totalProducts"
         class="text-no-wrap"
       >
         <template #item.name="{ item }">
@@ -305,27 +242,27 @@ const handleSave = (productData: Product) => {
 
         <template #item.category="{ item }">
           <VChip
-            :color="resolveCategoryColor(item.category)"
+            :color="resolveCategoryColor(item.category?.slug || 'default')"
             size="small"
             label
             class="text-capitalize"
           >
-            {{ item.category }}
+            {{ item.category?.name || 'Uncategorized' }}
           </VChip>
         </template>
 
         <template #item.price="{ item }">
           {{ formatCurrency(item.price) }}
-          <span class="text-caption text-disabled">/ {{ item.unit }}</span>
+          <span v-if="item.unit" class="text-caption text-disabled">/ {{ item.unit }}</span>
         </template>
 
         <template #item.stock="{ item }">
           <VChip
-            :color="item.stock > 10 || item.stock === 999 ? 'success' : 'warning'"
+            :color="item.stock > 10 ? 'success' : 'warning'"
             size="small"
             variant="tonal"
           >
-            {{ item.stock === 999 ? '∞' : item.stock }}
+            {{ item.stock }}
           </VChip>
         </template>
 
@@ -368,10 +305,9 @@ const handleSave = (productData: Product) => {
             <VIcon icon="tabler-trash" :size="22" />
           </VBtn>
         </template>
-      </VDataTable>
+      </VDataTableServer>
     </VCard>
 
-    <!-- Delete Dialog -->
     <VDialog v-model="isDeleteDialogVisible" max-width="400">
       <VCard title="Confirm Delete">
         <VCardText>
@@ -397,7 +333,6 @@ const handleSave = (productData: Product) => {
       </VCard>
     </VDialog>
 
-    <!-- Form Dialog -->
     <ProductFormDialog
       v-model="isFormDialogVisible"
       :is-edit="isEditMode"
@@ -405,7 +340,6 @@ const handleSave = (productData: Product) => {
       @save="handleSave"
     />
 
-    <!-- Snackbar -->
     <VSnackbar
       v-model="snackbar"
       :color="snackbarColor"

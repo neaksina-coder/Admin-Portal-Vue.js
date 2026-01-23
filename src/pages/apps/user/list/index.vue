@@ -16,7 +16,7 @@ const selectedPlan = ref()
 const selectedStatus = ref()
 
 // Data table options
-const itemsPerPage = ref(10)
+const itemsPerPage = ref(20)
 const page = ref(1)
 const sortBy = ref()
 const orderBy = ref()
@@ -27,6 +27,13 @@ const snackbarColor = ref('success')
 const router = useRouter()
 const isDeleteDialogVisible = ref(false)
 const pendingDeleteUserId = ref<number | null>(null)
+const userData = useCookie<any>('userData')
+const isSuperuser = computed(() => userData.value?.role === 'superuser')
+
+watch(isSuperuser, value => {
+  if (!value)
+    selectedRole.value = undefined
+}, { immediate: true })
 
 // Update data table options
 const updateOptions = (options: any) => {
@@ -64,29 +71,53 @@ const users = computed((): UserProperties[] => (usersData.value?.users ?? []).ma
   billing: u.billing ?? '',
   status: u.status ?? '',
 })))
-const totalUsers = computed(() => usersData.value?.totalUsers ?? 0)
+const visibleUsers = computed(() => (isSuperuser.value
+  ? users.value.filter(user => ['admin', 'superuser'].includes((user.role || '').toLowerCase()))
+  : users.value))
+const totalUsers = computed(() => (isSuperuser.value
+  ? visibleUsers.value.length
+  : (usersData.value?.totalUsers ?? 0)))
 
 // 👉 search filters
-const roles = [
+const defaultRoles = [
+  { label: 'User', value: 'user' },
+  { label: 'Admin', value: 'admin' },
+  { label: 'Superuser', value: 'superuser' },
+]
+const defaultPlans = [
+  { label: 'Basic', value: 'basic' },
+  { label: 'Company', value: 'company' },
+  { label: 'Enterprise', value: 'enterprise' },
+  { label: 'Team', value: 'team' },
+]
+const defaultStatuses = [
+  { label: 'Active', value: 'active' },
+  { label: 'Inactive', value: 'inactive' },
+  { label: 'Pending', value: 'pending' },
+]
+
+const { data: filtersData } = await useApi<any>('/users/filters')
+
+const normalizeItems = (items: any[]) => items.map(item => ({
+  title: item.title ?? item.label ?? item.value,
+  value: item.value,
+}))
+
+const rawRoles = computed(() => (filtersData.value?.roles?.length ? filtersData.value.roles : defaultRoles))
+const rawPlans = computed(() => (filtersData.value?.plans?.length ? filtersData.value.plans : defaultPlans))
+const rawStatuses = computed(() => (filtersData.value?.statuses?.length ? filtersData.value.statuses : defaultStatuses))
+
+const roles = computed(() => normalizeItems(isSuperuser.value
+  ? rawRoles.value.filter((role: any) => role.value !== 'user')
+  : rawRoles.value.filter((role: any) => role.value !== 'superuser')))
+
+const roleEditOptions = [
   { title: 'Admin', value: 'admin' },
-  { title: 'Author', value: 'author' },
-  { title: 'Editor', value: 'editor' },
-  { title: 'Maintainer', value: 'maintainer' },
-  { title: 'Subscriber', value: 'subscriber' },
+  { title: 'Superuser', value: 'superuser' },
 ]
 
-const plans = [
-  { title: 'Basic', value: 'basic' },
-  { title: 'Company', value: 'company' },
-  { title: 'Enterprise', value: 'enterprise' },
-  { title: 'Team', value: 'team' },
-]
-
-const status = [
-  { title: 'Pending', value: 'pending' },
-  { title: 'Active', value: 'active' },
-  { title: 'Inactive', value: 'inactive' },
-]
+const plans = computed(() => normalizeItems(rawPlans.value))
+const status = computed(() => normalizeItems(rawStatuses.value))
 
 const resolveUserRoleVariant = (role: string) => {
   const roleLowerCase = role.toLowerCase()
@@ -137,7 +168,8 @@ const isAddNewUserDrawerVisible = ref(false)
 // 👉 Add new user
 const addNewUser = async (userData: UserProperties) => {
   try {
-    await $api('/users', {
+    const endpoint = userData.role === 'superuser' ? '/users/superusers' : '/users'
+    await $api(endpoint, {
       method: 'POST',
       body: userData,
     })
@@ -147,6 +179,20 @@ const addNewUser = async (userData: UserProperties) => {
   }
   catch (error) {
     showSnackbar('Failed to create user.', 'error')
+  }
+}
+
+const updateUserRole = async (id: number, role: string) => {
+  try {
+    await $api(`/users/${id}/role`, {
+      method: 'PUT',
+      body: { role },
+    })
+    showSnackbar('Role updated successfully.')
+    fetchUsers()
+  }
+  catch (error) {
+    showSnackbar('Failed to update role.', 'error')
   }
 }
 
@@ -248,7 +294,7 @@ const widgetData = ref([
           <!-- 👉 Select Role -->
           <VCol
             cols="12"
-            sm="4"
+            :sm="isSuperuser ? 4 : 6"
           >
             <AppSelect
               v-model="selectedRole"
@@ -261,7 +307,7 @@ const widgetData = ref([
           <!-- 👉 Select Plan -->
           <VCol
             cols="12"
-            sm="4"
+            :sm="isSuperuser ? 4 : 6"
           >
             <AppSelect
               v-model="selectedPlan"
@@ -273,6 +319,7 @@ const widgetData = ref([
           </VCol>
           <!-- 👉 Select Status -->
           <VCol
+            v-if="isSuperuser"
             cols="12"
             sm="4"
           >
@@ -290,7 +337,7 @@ const widgetData = ref([
       <VDivider />
 
       <VCardText class="d-flex flex-wrap gap-4">
-        <div class="me-3 d-flex gap-3">
+        <!-- <div class="me-3 d-flex gap-3">
           <AppSelect
             :model-value="itemsPerPage"
             :items="[
@@ -303,7 +350,7 @@ const widgetData = ref([
             style="inline-size: 6.25rem;"
             @update:model-value="itemsPerPage = parseInt($event, 10)"
           />
-        </div>
+        </div> -->
         <VSpacer />
 
         <div class="app-user-search-filter d-flex align-center flex-wrap gap-4">
@@ -341,7 +388,13 @@ const widgetData = ref([
         v-model:items-per-page="itemsPerPage"
         v-model:model-value="selectedRows"
         v-model:page="page"
-        :items="users"
+        :items-per-page-options="[
+          { value: 20, title: '20' },
+          { value: 50, title: '50' },
+          { value: 100, title: '100' },
+          { value: -1, title: '$vuetify.dataFooter.itemsPerPageAll' },
+        ]"
+        :items="visibleUsers"
         item-value="id"
         :items-length="totalUsers"
         :headers="headers"
@@ -389,7 +442,18 @@ const widgetData = ref([
             />
 
             <div class="text-capitalize text-high-emphasis text-body-1">
-              {{ item.role }}
+              <AppSelect
+                v-if="isSuperuser"
+                :model-value="item.role"
+                density="compact"
+                hide-details
+                :items="roleEditOptions"
+                style="inline-size: 9rem;"
+                @update:model-value="updateUserRole(item.id, $event)"
+              />
+              <span v-else>
+                {{ item.role }}
+              </span>
             </div>
           </div>
         </template>
@@ -492,3 +556,5 @@ const widgetData = ref([
     </VSnackbar>
   </section>
 </template>
+
+

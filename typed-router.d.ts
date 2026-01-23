@@ -47,6 +47,7 @@ declare module 'vue-router/auto-routes' {
     'apps-permissions': RouteRecordInfo<'apps-permissions', '/apps/permissions', Record<never, never>, Record<never, never>>,
     'apps-products': RouteRecordInfo<'apps-products', '/apps/products', Record<never, never>, Record<never, never>>,
     'apps-products-add': RouteRecordInfo<'apps-products-add', '/apps/products/add', Record<never, never>, Record<never, never>>,
+    'apps-products-categories': RouteRecordInfo<'apps-products-categories', '/apps/products/categories', Record<never, never>, Record<never, never>>,
     'apps-products-list': RouteRecordInfo<'apps-products-list', '/apps/products/list', Record<never, never>, Record<never, never>>,
     'apps-products-preview-id': RouteRecordInfo<'apps-products-preview-id', '/apps/products/preview/:id', { id: ParamValue<true> }, { id: ParamValue<false> }>,
     'apps-roles': RouteRecordInfo<'apps-roles', '/apps/roles', Record<never, never>, Record<never, never>>,

@@ -209,7 +209,7 @@ const onSubmitUserInfo = (updatedUser: Props['userData']) => {
               </VListItemTitle>
             </VListItem>
 
-            <VListItem>
+            <!-- <VListItem>
               <VListItemTitle>
                 <h6 class="text-h6">
                   Tax ID:
@@ -218,7 +218,7 @@ const onSubmitUserInfo = (updatedUser: Props['userData']) => {
                   </div>
                 </h6>
               </VListItemTitle>
-            </VListItem>
+            </VListItem> -->
 
             <VListItem>
               <VListItemTitle>

@@ -309,11 +309,11 @@ const currentBillingAddress = {
                   </td>
                 </tr>
                 <tr>
-                  <td>
+                  <!-- <td>
                     <h6 class="text-h6 text-no-wrap mb-2">
                       Tax ID:
                     </h6>
-                  </td>
+                  </td> -->
                   <td>
                     <p class="text-body-1 mb-2">
                       {{ currentAddress.taxID }}

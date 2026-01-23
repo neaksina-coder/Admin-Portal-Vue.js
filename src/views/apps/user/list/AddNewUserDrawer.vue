@@ -30,7 +30,15 @@ const status = ref()
 const password = ref('')
 
 const currentRole = computed(() => (useCookie<any>('userData').value?.role || '').toLowerCase())
-const roleOptions = computed(() => (currentRole.value === 'superuser' ? ['user', 'admin'] : ['user']))
+const roleOptions = computed(() => {
+  if (currentRole.value === 'superuser')
+    return ['user', 'admin', 'superuser']
+
+  if (currentRole.value === 'admin')
+    return ['user']
+
+  return ['user']
+})
 
 // 👉 drawer close
 const closeNavigationDrawer = () => {

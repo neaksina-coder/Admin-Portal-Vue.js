@@ -2,6 +2,9 @@
 import AddNewUserDrawer from '@/views/apps/user/list/AddNewUserDrawer.vue'
 import type { UserProperties } from '@db/apps/users/types'
 
+const userData = useCookie<any>('userData')
+const isSuperuser = computed(() => userData.value?.role === 'superuser')
+
 // 👉 Store
 const searchQuery = ref('')
 const selectedRole = ref()
@@ -32,7 +35,7 @@ const headers = [
 ]
 
 // 👉 Fetching users
-const { data: usersData, execute: fetchUsers } = await useApi<any>(createUrl('/apps/users', {
+const { data: usersData, execute: fetchUsers } = await useApi<any>(createUrl('/users', {
   query: {
     q: searchQuery,
     status: selectedStatus,
@@ -45,17 +48,29 @@ const { data: usersData, execute: fetchUsers } = await useApi<any>(createUrl('/a
   },
 }))
 
-const users = computed((): UserProperties[] => usersData.value.users)
-const totalUsers = computed(() => usersData.value.totalUsers)
+const users = computed((): UserProperties[] => (usersData.value?.users ?? []).map((u: any) => ({
+  ...u,
+  currentPlan: u.currentPlan ?? u.plan ?? '',
+  billing: u.billing ?? '',
+  status: u.status ?? '',
+})))
+const visibleUsers = computed(() => (isSuperuser.value
+  ? users.value.filter(user => ['admin', 'superuser'].includes((user.role || '').toLowerCase()))
+  : users.value))
+const totalUsers = computed(() => (isSuperuser.value
+  ? visibleUsers.value.length
+  : (usersData.value?.totalUsers ?? 0)))
 
 // 👉 search filters
 const roles = [
   { title: 'Admin', value: 'admin' },
-  { title: 'Author', value: 'author' },
-  { title: 'Editor', value: 'editor' },
-  { title: 'Maintainer', value: 'maintainer' },
-  { title: 'Subscriber', value: 'subscriber' },
+  { title: 'User', value: 'user' },
+  { title: 'Superuser', value: 'superuser' },
 ]
+
+const roleOptions = computed(() => (isSuperuser.value
+  ? roles.filter(role => role.value !== 'user')
+  : roles.filter(role => role.value !== 'superuser')))
 
 const resolveUserRoleVariant = (role: string) => {
   const roleLowerCase = role.toLowerCase()
@@ -70,6 +85,8 @@ const resolveUserRoleVariant = (role: string) => {
     return { color: 'info', icon: 'tabler-pencil' }
   if (roleLowerCase === 'admin')
     return { color: 'error', icon: 'tabler-device-laptop' }
+  if (roleLowerCase === 'superuser')
+    return { color: 'primary', icon: 'tabler-crown' }
 
   return { color: 'primary', icon: 'tabler-user' }
 }
@@ -87,10 +104,19 @@ const resolveUserStatusVariant = (stat: string) => {
 }
 
 const isAddNewUserDrawerVisible = ref(false)
+const snackbar = ref(false)
+const snackbarText = ref('')
+const snackbarColor = ref<'success' | 'error'>('success')
+
+const showSnackbar = (text: string, color: 'success' | 'error' = 'success') => {
+  snackbarText.value = text
+  snackbarColor.value = color
+  snackbar.value = true
+}
 
 // 👉 Add new user
 const addNewUser = async (userData: UserProperties) => {
-  await $api('/apps/users', {
+  await $api('/users', {
     method: 'POST',
     body: userData,
   })
@@ -101,7 +127,7 @@ const addNewUser = async (userData: UserProperties) => {
 
 // 👉 Delete user
 const deleteUser = async (id: number) => {
-  await $api(`/apps/users/${id}`, {
+  await $api(`/users/${id}`, {
     method: 'DELETE',
   })
 
@@ -114,6 +140,24 @@ const deleteUser = async (id: number) => {
   // TODO: Make this async
   fetchUsers()
 }
+
+const updateUserRole = async (id: number, role: string) => {
+  try {
+    await $api(`/users/${id}/role`, {
+      method: 'PUT',
+      body: { role },
+    })
+    showSnackbar('Role updated successfully.')
+    fetchUsers()
+  }
+  catch (error) {
+    showSnackbar('Failed to update role.', 'error')
+  }
+}
+
+defineExpose({
+  refresh: fetchUsers,
+})
 </script>
 
 <template>
@@ -152,7 +196,7 @@ const deleteUser = async (id: number) => {
           <AppSelect
             v-model="selectedRole"
             placeholder="Select Role"
-            :items="roles"
+            :items="roleOptions"
             clearable
             clear-icon="tabler-x"
             style="inline-size: 10rem;"
@@ -173,7 +217,7 @@ const deleteUser = async (id: number) => {
           { value: 50, title: '50' },
           { value: -1, title: '$vuetify.dataFooter.itemsPerPageAll' },
         ]"
-        :items="users"
+        :items="visibleUsers"
         :items-length="totalUsers"
         :headers="headers"
         class="text-no-wrap"
@@ -220,7 +264,18 @@ const deleteUser = async (id: number) => {
             />
 
             <div class="text-capitalize text-high-emphasis text-body-1">
-              {{ item.role }}
+              <AppSelect
+                v-if="isSuperuser"
+                :model-value="item.role"
+                density="compact"
+                hide-details
+                :items="roleOptions"
+                style="inline-size: 9rem;"
+                @update:model-value="updateUserRole(item.id, $event)"
+              />
+              <span v-else>
+                {{ item.role }}
+              </span>
             </div>
           </div>
         </template>
@@ -304,6 +359,14 @@ const deleteUser = async (id: number) => {
       v-model:is-drawer-open="isAddNewUserDrawerVisible"
       @user-data="addNewUser"
     />
+    <VSnackbar
+      v-model="snackbar"
+      :color="snackbarColor"
+      :timeout="3000"
+      location="top"
+    >
+      {{ snackbarText }}
+    </VSnackbar>
   </section>
 </template>
 

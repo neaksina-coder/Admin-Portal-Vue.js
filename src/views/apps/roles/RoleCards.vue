@@ -11,6 +11,9 @@ import avatar8 from '@images/avatars/avatar-8.png'
 import avatar9 from '@images/avatars/avatar-9.png'
 import girlUsingMobile from '@images/pages/girl-using-mobile.png'
 
+const userData = useCookie<any>('userData')
+const isSuperuser = computed(() => userData.value?.role === 'superuser')
+
 interface Permission {
   name: string
   read: boolean
@@ -51,6 +54,27 @@ const roles = ref<Roles[]>([
         },
         {
           name: 'API Control',
+          read: true,
+          write: true,
+          create: true,
+        },
+      ],
+    },
+  },
+  {
+    role: 'Superuser',
+    users: [avatar1, avatar2],
+    details: {
+      name: 'Superuser',
+      permissions: [
+        {
+          name: 'User Management',
+          read: true,
+          write: true,
+          create: true,
+        },
+        {
+          name: 'Roles & Permissions',
           read: true,
           write: true,
           create: true,
@@ -180,6 +204,10 @@ const roles = ref<Roles[]>([
   },
 ])
 
+const visibleRoles = computed(() => (isSuperuser.value
+  ? roles.value.filter(role => ['Administrator', 'Users', 'Superuser'].includes(role.role))
+  : roles.value))
+
 const isRoleDialogVisible = ref(false)
 
 const roleDetail = ref<RoleDetails>()
@@ -196,7 +224,7 @@ const editPermission = (value: RoleDetails) => {
   <VRow>
     <!-- 👉 Roles -->
     <VCol
-      v-for="item in roles"
+      v-for="item in visibleRoles"
       :key="item.role"
       cols="12"
       sm="6"
@@ -266,6 +294,7 @@ const editPermission = (value: RoleDetails) => {
 
     <!-- 👉 Add New Role -->
     <VCol
+      v-if="!isSuperuser"
       cols="12"
       sm="6"
       lg="4"

@@ -42,10 +42,17 @@ export default [
     action: 'read',
     subject: 'Apps',
   },
-    {
+  {
     title: 'Products & Services',
     to: 'apps-products', // single link
     icon: { icon: 'tabler-box' },
+    action: 'read',
+    subject: 'Products',
+  },
+  {
+    title: 'Product Categories',
+    to: 'apps-products-categories',
+    icon: { icon: 'tabler-tags' },
     action: 'read',
     subject: 'Products',
   },

@@ -1,41 +1,136 @@
 <script lang="ts" setup>
 import avatar1 from '@images/avatars/avatar-1.png'
 
-const accountData = {
-  avatarImg: avatar1,
-  firstName: 'john',
-  lastName: 'Doe',
-  email: 'johnDoe@example.com',
-  org: 'Pixinvent',
-  phone: '+1 (917) 543-9876',
-  address: '123 Main St, New York, NY 10001',
-  state: 'New York',
-  zip: '10001',
-  country: 'USA',
-  language: 'English',
-  timezone: '(GMT-11:00) International Date Line West',
-  currency: 'USD',
+type AccountForm = {
+  avatarImg: string
+  firstName: string
+  lastName: string
+  email: string
+  company: string
+  country: string
+  contact: string
 }
 
-const refInputEl = ref<HTMLElement>()
+const accountData = ref<AccountForm>({
+  avatarImg: avatar1,
+  firstName: '',
+  lastName: '',
+  email: '',
+  company: '',
+  country: '',
+  contact: '',
+})
+
+const userData = useCookie<any>('userData')
+
+const refInputEl = ref<HTMLInputElement>()
+const selectedAvatarFile = ref<File | null>(null)
 
 const isConfirmDialogOpen = ref(false)
-const accountDataLocal = ref(structuredClone(accountData))
 const isAccountDeactivated = ref(false)
+const isLoading = ref(false)
+const isSaving = ref(false)
 
+const snackbar = ref(false)
+const snackbarText = ref('')
+const snackbarColor = ref<'success' | 'error'>('success')
+
+const cloneAccount = (data: AccountForm): AccountForm => ({
+  avatarImg: data.avatarImg,
+  firstName: data.firstName,
+  lastName: data.lastName,
+  email: data.email,
+  company: data.company,
+  country: data.country,
+  contact: data.contact,
+})
+
+const accountDataLocal = ref(cloneAccount(accountData.value))
 const validateAccountDeactivation = [(v: string) => !!v || 'Please confirm account deactivation']
 
+const showSnackbar = (text: string, color: 'success' | 'error' = 'success') => {
+  snackbarText.value = text
+  snackbarColor.value = color
+  snackbar.value = true
+}
+
+const splitFullName = (fullName: string) => {
+  const normalized = fullName.trim()
+  if (!normalized)
+    return { firstName: '', lastName: '' }
+
+  const parts = normalized.split(/\s+/)
+  const firstName = parts.shift() ?? ''
+  const lastName = parts.join(' ')
+
+  return { firstName, lastName }
+}
+
+const applyAccountData = (data: any) => {
+  const { firstName, lastName } = splitFullName(data?.fullName ?? '')
+
+  accountData.value = {
+    avatarImg: data?.profile?.profileImage || avatar1,
+    firstName,
+    lastName,
+    email: data?.email ?? '',
+    company: data?.profile?.company ?? '',
+    country: data?.profile?.country ?? '',
+    contact: data?.profile?.contact ?? '',
+  }
+
+  accountDataLocal.value = cloneAccount(accountData.value)
+
+  if (userData.value) {
+    userData.value = {
+      ...userData.value,
+      fullName: data?.fullName ?? userData.value.fullName,
+      email: data?.email ?? userData.value.email,
+      avatar: data?.profile?.profileImage ?? userData.value.avatar,
+      profile: {
+        ...(userData.value.profile ?? {}),
+        company: data?.profile?.company ?? userData.value.profile?.company ?? '',
+        country: data?.profile?.country ?? userData.value.profile?.country ?? '',
+        contact: data?.profile?.contact ?? userData.value.profile?.contact ?? '',
+        profileImage: data?.profile?.profileImage ?? userData.value.profile?.profileImage ?? '',
+      },
+    }
+  }
+}
+
+const fetchAccount = async () => {
+  isLoading.value = true
+  try {
+    const data = await $api('/users/me')
+    applyAccountData(data)
+  }
+  catch (error) {
+    showSnackbar('Failed to load account data.', 'error')
+  }
+  finally {
+    isLoading.value = false
+  }
+}
+
+onMounted(fetchAccount)
+
 const resetForm = () => {
-  accountDataLocal.value = structuredClone(accountData)
+  accountDataLocal.value = cloneAccount(accountData.value)
+  selectedAvatarFile.value = null
+  if (refInputEl.value)
+    refInputEl.value.value = ''
 }
 
 // changeAvatar function
-const changeAvatar = (file: Event) => {
+const changeAvatar = (event: Event) => {
   const fileReader = new FileReader()
-  const { files } = file.target as HTMLInputElement
+  const { files } = event.target as HTMLInputElement
 
   if (files && files.length) {
-    fileReader.readAsDataURL(files[0])
+    const file = files[0]
+
+    selectedAvatarFile.value = file
+    fileReader.readAsDataURL(file)
     fileReader.onload = () => {
       if (typeof fileReader.result === 'string')
         accountDataLocal.value.avatarImg = fileReader.result
@@ -45,65 +140,55 @@ const changeAvatar = (file: Event) => {
 
 // reset avatar image
 const resetAvatar = () => {
-  accountDataLocal.value.avatarImg = accountData.avatarImg
+  selectedAvatarFile.value = null
+  accountDataLocal.value.avatarImg = accountData.value.avatarImg
+  if (refInputEl.value)
+    refInputEl.value.value = ''
 }
 
-const timezones = [
-  '(GMT-11:00) International Date Line West',
-  '(GMT-11:00) Midway Island',
-  '(GMT-10:00) Hawaii',
-  '(GMT-09:00) Alaska',
-  '(GMT-08:00) Pacific Time (US & Canada)',
-  '(GMT-08:00) Tijuana',
-  '(GMT-07:00) Arizona',
-  '(GMT-07:00) Chihuahua',
-  '(GMT-07:00) La Paz',
-  '(GMT-07:00) Mazatlan',
-  '(GMT-07:00) Mountain Time (US & Canada)',
-  '(GMT-06:00) Central America',
-  '(GMT-06:00) Central Time (US & Canada)',
-  '(GMT-06:00) Guadalajara',
-  '(GMT-06:00) Mexico City',
-  '(GMT-06:00) Monterrey',
-  '(GMT-06:00) Saskatchewan',
-  '(GMT-05:00) Bogota',
-  '(GMT-05:00) Eastern Time (US & Canada)',
-  '(GMT-05:00) Indiana (East)',
-  '(GMT-05:00) Lima',
-  '(GMT-05:00) Quito',
-  '(GMT-04:00) Atlantic Time (Canada)',
-  '(GMT-04:00) Caracas',
-  '(GMT-04:00) La Paz',
-  '(GMT-04:00) Santiago',
-  '(GMT-03:30) Newfoundland',
-  '(GMT-03:00) Brasilia',
-  '(GMT-03:00) Buenos Aires',
-  '(GMT-03:00) Georgetown',
-  '(GMT-03:00) Greenland',
-  '(GMT-02:00) Mid-Atlantic',
-  '(GMT-01:00) Azores',
-  '(GMT-01:00) Cape Verde Is.',
-  '(GMT+00:00) Casablanca',
-  '(GMT+00:00) Dublin',
-  '(GMT+00:00) Edinburgh',
-  '(GMT+00:00) Lisbon',
-  '(GMT+00:00) London',
-]
+const buildFullName = () => [accountDataLocal.value.firstName, accountDataLocal.value.lastName]
+  .filter(Boolean)
+  .join(' ')
+  .trim()
 
-const currencies = [
-  'USD',
-  'EUR',
-  'GBP',
-  'AUD',
-  'BRL',
-  'CAD',
-  'CNY',
-  'CZK',
-  'DKK',
-  'HKD',
-  'HUF',
-  'INR',
-]
+const saveAccount = async () => {
+  isSaving.value = true
+  try {
+    const formData = new FormData()
+    const fullName = buildFullName()
+
+    if (fullName)
+      formData.append('fullName', fullName)
+    if (accountDataLocal.value.email)
+      formData.append('email', accountDataLocal.value.email)
+    if (accountDataLocal.value.company)
+      formData.append('company', accountDataLocal.value.company)
+    if (accountDataLocal.value.country)
+      formData.append('country', accountDataLocal.value.country)
+    if (accountDataLocal.value.contact)
+      formData.append('contact', accountDataLocal.value.contact)
+    if (selectedAvatarFile.value)
+      formData.append('profileImage', selectedAvatarFile.value)
+
+    const data = await $api('/users/me', {
+      method: 'PUT',
+      body: formData,
+    })
+
+    applyAccountData(data)
+    selectedAvatarFile.value = null
+    if (refInputEl.value)
+      refInputEl.value.value = ''
+
+    showSnackbar('Account updated successfully.')
+  }
+  catch (error) {
+    showSnackbar('Failed to update account.', 'error')
+  }
+  finally {
+    isSaving.value = false
+  }
+}
 </script>
 
 <template>
@@ -111,7 +196,7 @@ const currencies = [
     <VCol cols="12">
       <VCard>
         <VCardText class="d-flex">
-          <!-- 👉 Avatar -->
+          <!-- ðŸ‘‰ Avatar -->
           <VAvatar
             rounded
             size="100"
@@ -119,12 +204,13 @@ const currencies = [
             :image="accountDataLocal.avatarImg"
           />
 
-          <!-- 👉 Upload Photo -->
+          <!-- ðŸ‘‰ Upload Photo -->
           <form class="d-flex flex-column justify-center gap-4">
             <div class="d-flex flex-wrap gap-4">
               <VBtn
                 color="primary"
                 size="small"
+                :disabled="isLoading"
                 @click="refInputEl?.click()"
               >
                 <VIcon
@@ -148,6 +234,7 @@ const currencies = [
                 size="small"
                 color="secondary"
                 variant="tonal"
+                :disabled="isLoading"
                 @click="resetAvatar"
               >
                 <span class="d-none d-sm-block">Reset</span>
@@ -165,10 +252,13 @@ const currencies = [
         </VCardText>
 
         <VCardText class="pt-2">
-          <!-- 👉 Form -->
-          <VForm class="mt-3">
+          <!-- ðŸ‘‰ Form -->
+          <VForm
+            class="mt-3"
+            @submit.prevent="saveAccount"
+          >
             <VRow>
-              <!-- 👉 First Name -->
+              <!-- ðŸ‘‰ First Name -->
               <VCol
                 md="6"
                 cols="12"
@@ -177,10 +267,11 @@ const currencies = [
                   v-model="accountDataLocal.firstName"
                   placeholder="John"
                   label="First Name"
+                  :disabled="isLoading"
                 />
               </VCol>
 
-              <!-- 👉 Last Name -->
+              <!-- ðŸ‘‰ Last Name -->
               <VCol
                 md="6"
                 cols="12"
@@ -189,10 +280,11 @@ const currencies = [
                   v-model="accountDataLocal.lastName"
                   placeholder="Doe"
                   label="Last Name"
+                  :disabled="isLoading"
                 />
               </VCol>
 
-              <!-- 👉 Email -->
+              <!-- ðŸ‘‰ Email -->
               <VCol
                 cols="12"
                 md="6"
@@ -202,134 +294,67 @@ const currencies = [
                   label="E-mail"
                   placeholder="johndoe@gmail.com"
                   type="email"
+                  :disabled="isLoading"
                 />
               </VCol>
 
-              <!-- 👉 Organization -->
+              <!-- ðŸ‘‰ Company -->
               <VCol
                 cols="12"
                 md="6"
               >
                 <AppTextField
-                  v-model="accountDataLocal.org"
-                  label="Organization"
-                  placeholder="Pixinvent"
+                  v-model="accountDataLocal.company"
+                  label="Company"
+                  placeholder="PNC"
+                  :disabled="isLoading"
                 />
               </VCol>
 
-              <!-- 👉 Phone -->
+              <!-- ðŸ‘‰ Contact -->
               <VCol
                 cols="12"
                 md="6"
               >
                 <AppTextField
-                  v-model="accountDataLocal.phone"
-                  label="Phone Number"
-                  placeholder="+1 (917) 543-9876"
+                  v-model="accountDataLocal.contact"
+                  label="Contact"
+                  placeholder="0969780938"
+                  :disabled="isLoading"
                 />
               </VCol>
 
-              <!-- 👉 Address -->
+              <!-- ðŸ‘‰ Country -->
               <VCol
                 cols="12"
                 md="6"
               >
                 <AppTextField
-                  v-model="accountDataLocal.address"
-                  label="Address"
-                  placeholder="123 Main St, New York, NY 10001"
-                />
-              </VCol>
-
-              <!-- 👉 State -->
-              <VCol
-                cols="12"
-                md="6"
-              >
-                <AppTextField
-                  v-model="accountDataLocal.state"
-                  label="State"
-                  placeholder="New York"
-                />
-              </VCol>
-
-              <!-- 👉 Zip Code -->
-              <VCol
-                cols="12"
-                md="6"
-              >
-                <AppTextField
-                  v-model="accountDataLocal.zip"
-                  label="Zip Code"
-                  placeholder="10001"
-                />
-              </VCol>
-
-              <!-- 👉 Country -->
-              <VCol
-                cols="12"
-                md="6"
-              >
-                <AppSelect
                   v-model="accountDataLocal.country"
                   label="Country"
-                  :items="['USA', 'Canada', 'UK', 'India', 'Australia']"
-                  placeholder="Select Country"
+                  placeholder="Cambodia"
+                  :disabled="isLoading"
                 />
               </VCol>
 
-              <!-- 👉 Language -->
-              <VCol
-                cols="12"
-                md="6"
-              >
-                <AppSelect
-                  v-model="accountDataLocal.language"
-                  label="Language"
-                  placeholder="Select Language"
-                  :items="['English', 'Spanish', 'Arabic', 'Hindi', 'Urdu']"
-                />
-              </VCol>
-
-              <!-- 👉 Timezone -->
-              <VCol
-                cols="12"
-                md="6"
-              >
-                <AppSelect
-                  v-model="accountDataLocal.timezone"
-                  label="Timezone"
-                  placeholder="Select Timezone"
-                  :items="timezones"
-                  :menu-props="{ maxHeight: 200 }"
-                />
-              </VCol>
-
-              <!-- 👉 Currency -->
-              <VCol
-                cols="12"
-                md="6"
-              >
-                <AppSelect
-                  v-model="accountDataLocal.currency"
-                  label="Currency"
-                  placeholder="Select Currency"
-                  :items="currencies"
-                  :menu-props="{ maxHeight: 200 }"
-                />
-              </VCol>
-
-              <!-- 👉 Form Actions -->
+              <!-- ðŸ‘‰ Form Actions -->
               <VCol
                 cols="12"
                 class="d-flex flex-wrap gap-4"
               >
-                <VBtn>Save changes</VBtn>
+                <VBtn
+                  type="submit"
+                  :loading="isSaving"
+                  :disabled="isLoading"
+                >
+                  Save changes
+                </VBtn>
 
                 <VBtn
                   color="secondary"
                   variant="tonal"
                   type="reset"
+                  :disabled="isLoading || isSaving"
                   @click.prevent="resetForm"
                 >
                   Cancel
@@ -341,30 +366,7 @@ const currencies = [
       </VCard>
     </VCol>
 
-    <VCol cols="12">
-      <!-- 👉 Delete Account -->
-      <VCard title="Delete Account">
-        <VCardText>
-          <!-- 👉 Checkbox and Button  -->
-          <div>
-            <VCheckbox
-              v-model="isAccountDeactivated"
-              :rules="validateAccountDeactivation"
-              label="I confirm my account deactivation"
-            />
-          </div>
-
-          <VBtn
-            :disabled="!isAccountDeactivated"
-            color="error"
-            class="mt-6"
-            @click="isConfirmDialogOpen = true"
-          >
-            Deactivate Account
-          </VBtn>
-        </VCardText>
-      </VCard>
-    </VCol>
+   
   </VRow>
 
   <!-- Confirm Dialog -->
@@ -376,4 +378,13 @@ const currencies = [
     cancel-title="Cancelled"
     cancel-msg="Account Deactivation Cancelled!"
   />
+
+  <VSnackbar
+    v-model="snackbar"
+    :color="snackbarColor"
+    :timeout="3000"
+    location="top"
+  >
+    {{ snackbarText }}
+  </VSnackbar>
 </template>

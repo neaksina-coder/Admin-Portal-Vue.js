@@ -50,7 +50,7 @@ export default [
     subject: 'Products',
   },
   {
-    title: 'Product Categories',
+    title: ' Categories',
     to: 'apps-products-categories',
     icon: { icon: 'tabler-tags' },
     action: 'read',

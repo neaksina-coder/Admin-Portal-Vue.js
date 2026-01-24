@@ -7,6 +7,96 @@ const isConfirmPasswordVisible = ref(false)
 const currentPassword = ref('')
 const newPassword = ref('')
 const confirmPassword = ref('')
+const isSaving = ref(false)
+const currentPasswordError = ref<string | undefined>()
+const newPasswordError = ref<string[] | undefined>()
+const confirmPasswordError = ref<string | undefined>()
+
+const snackbar = ref(false)
+const snackbarText = ref('')
+const snackbarColor = ref<'success' | 'error'>('success')
+
+const showSnackbar = (text: string, color: 'success' | 'error' = 'success') => {
+  snackbarText.value = text
+  snackbarColor.value = color
+  snackbar.value = true
+}
+
+const resetPasswordForm = () => {
+  currentPassword.value = ''
+  newPassword.value = ''
+  confirmPassword.value = ''
+  currentPasswordError.value = undefined
+  newPasswordError.value = undefined
+  confirmPasswordError.value = undefined
+}
+
+const validateNewPassword = (password: string) => {
+  const errors: string[] = []
+
+  if (password.length < 8)
+    errors.push('Password must be at least 8 characters long')
+  if (!/[a-z]/.test(password))
+    errors.push('Password must include at least one lowercase letter')
+  if (!/[A-Z]/.test(password))
+    errors.push('Password must include at least one uppercase letter')
+  if (!/[\W_]/.test(password))
+    errors.push('Password must include at least one symbol')
+
+  return errors
+}
+
+const updatePassword = async () => {
+  currentPasswordError.value = undefined
+  newPasswordError.value = undefined
+  confirmPasswordError.value = undefined
+
+  if (!currentPassword.value || !newPassword.value || !confirmPassword.value) {
+    if (!currentPassword.value)
+      currentPasswordError.value = 'Current password is required'
+    if (!newPassword.value)
+      newPasswordError.value = 'New password is required'
+    if (!confirmPassword.value)
+      confirmPasswordError.value = 'Confirm password is required'
+    return
+  }
+
+  const validationErrors = validateNewPassword(newPassword.value)
+  if (validationErrors.length) {
+    newPasswordError.value = validationErrors
+    return
+  }
+
+  if (newPassword.value !== confirmPassword.value) {
+    confirmPasswordError.value = 'Passwords do not match'
+    return
+  }
+
+  isSaving.value = true
+  try {
+    const res = await $api('/users/me/password', {
+      method: 'PUT',
+      body: {
+        currentPassword: currentPassword.value,
+        newPassword: newPassword.value,
+        confirmPassword: confirmPassword.value,
+      },
+    })
+
+    showSnackbar(res?.message || 'Password updated successfully.')
+    resetPasswordForm()
+  }
+  catch (error) {
+    const apiMessage = (error as any)?.data?.message || (error as any)?.response?._data?.message
+    if (apiMessage === 'Current password is incorrect')
+      currentPasswordError.value = apiMessage
+    else
+      showSnackbar(apiMessage || 'Failed to update password.', 'error')
+  }
+  finally {
+    isSaving.value = false
+  }
+}
 
 const passwordRequirements = [
   'Minimum 8 characters long - the more, the better',
@@ -95,7 +185,7 @@ const isOneTimePasswordDialogVisible = ref(false)
     <!-- SECTION: Change Password -->
     <VCol cols="12">
       <VCard title="Change Password">
-        <VForm>
+        <VForm @submit.prevent="updatePassword">
           <VCardText class="pt-0">
             <!-- 👉 Current Password -->
             <VRow>
@@ -111,6 +201,9 @@ const isOneTimePasswordDialogVisible = ref(false)
                   label="Current Password"
                   autocomplete="on"
                   placeholder="············"
+                  :disabled="isSaving"
+                  :error-messages="currentPasswordError ? [currentPasswordError] : []"
+                  @update:model-value="currentPasswordError = undefined"
                   @click:append-inner="isCurrentPasswordVisible = !isCurrentPasswordVisible"
                 />
               </VCol>
@@ -130,6 +223,9 @@ const isOneTimePasswordDialogVisible = ref(false)
                   label="New Password"
                   autocomplete="on"
                   placeholder="············"
+                  :disabled="isSaving"
+                  :error-messages="newPasswordError || []"
+                  @update:model-value="newPasswordError = undefined"
                   @click:append-inner="isNewPasswordVisible = !isNewPasswordVisible"
                 />
               </VCol>
@@ -146,6 +242,9 @@ const isOneTimePasswordDialogVisible = ref(false)
                   label="Confirm New Password"
                   autocomplete="on"
                   placeholder="············"
+                  :disabled="isSaving"
+                  :error-messages="confirmPasswordError ? [confirmPasswordError] : []"
+                  @update:model-value="confirmPasswordError = undefined"
                   @click:append-inner="isConfirmPasswordVisible = !isConfirmPasswordVisible"
                 />
               </VCol>
@@ -177,12 +276,20 @@ const isOneTimePasswordDialogVisible = ref(false)
 
           <!-- 👉 Action Buttons -->
           <VCardText class="d-flex flex-wrap gap-4">
-            <VBtn>Save changes</VBtn>
+            <VBtn
+              type="submit"
+              :loading="isSaving"
+              :disabled="isSaving"
+            >
+              Save changes
+            </VBtn>
 
             <VBtn
               type="reset"
               color="secondary"
               variant="tonal"
+              :disabled="isSaving"
+              @click.prevent="resetPasswordForm"
             >
               Reset
             </VBtn>
@@ -371,6 +478,15 @@ const isOneTimePasswordDialogVisible = ref(false)
   <!-- SECTION Enable One time password -->
   <TwoFactorAuthDialog v-model:is-dialog-visible="isOneTimePasswordDialogVisible" />
   <!-- !SECTION -->
+
+  <VSnackbar
+    v-model="snackbar"
+    :color="snackbarColor"
+    :timeout="3000"
+    location="top"
+  >
+    {{ snackbarText }}
+  </VSnackbar>
 </template>
 
 <style lang="scss" scoped>

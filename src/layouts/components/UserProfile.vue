@@ -7,6 +7,10 @@ const ability = useAbility()
 // TODO: Get type from backend
 const userData = useCookie<any>('userData')
 
+const displayName = computed(() => userData.value?.fullName || userData.value?.username || '')
+const displayRole = computed(() => userData.value?.role || '')
+const avatarUrl = computed(() => userData.value?.avatar || userData.value?.profile?.profileImage || userData.value?.profileImage || '')
+
 const logout = async () => {
   try {
     await $api('/auth/logout', { method: 'POST' })
@@ -56,12 +60,12 @@ const userProfileList = [
     <VAvatar
       size="38"
       class="cursor-pointer"
-      :color="!(userData && userData.avatar) ? 'primary' : undefined"
-      :variant="!(userData && userData.avatar) ? 'tonal' : undefined"
+      :color="!(userData && avatarUrl) ? 'primary' : undefined"
+      :variant="!(userData && avatarUrl) ? 'tonal' : undefined"
     >
       <VImg
-        v-if="userData && userData.avatar"
-        :src="userData.avatar"
+        v-if="userData && avatarUrl"
+        :src="avatarUrl"
       />
       <VIcon
         v-else
@@ -88,12 +92,12 @@ const userProfileList = [
                   bordered
                 >
                   <VAvatar
-                    :color="!(userData && userData.avatar) ? 'primary' : undefined"
-                    :variant="!(userData && userData.avatar) ? 'tonal' : undefined"
+                    :color="!(userData && avatarUrl) ? 'primary' : undefined"
+                    :variant="!(userData && avatarUrl) ? 'tonal' : undefined"
                   >
                     <VImg
-                      v-if="userData && userData.avatar"
-                      :src="userData.avatar"
+                      v-if="userData && avatarUrl"
+                      :src="avatarUrl"
                     />
                     <VIcon
                       v-else
@@ -105,10 +109,10 @@ const userProfileList = [
 
               <div>
                 <h6 class="text-h6 font-weight-medium">
-                  {{ userData.fullName || userData.username }}
+                  {{ displayName }}
                 </h6>
                 <VListItemSubtitle class="text-capitalize text-disabled">
-                  {{ userData.role }}
+                  {{ displayRole }}
                 </VListItemSubtitle>
               </div>
             </div>

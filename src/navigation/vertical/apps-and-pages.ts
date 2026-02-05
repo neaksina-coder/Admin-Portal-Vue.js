@@ -1,8 +1,3 @@
-import { title } from "node:process"
-
-const userData = useCookie<any>('userData')
-const isSuperuser = userData.value?.role === 'superuser'
-
 const usersNavItem = {
   title: 'Users',
   icon: { icon: 'tabler-users' },
@@ -11,105 +6,225 @@ const usersNavItem = {
   subject: 'Users',
 }
 
+const operationsNavGroup = {
+  title: 'Operations',
+  icon: { icon: 'tabler-layout-grid' },
+  children: [
+    {
+      title: 'Products & Services',
+      to: 'apps-products',
+      icon: { icon: 'tabler-box' },
+      action: 'read',
+      subject: 'Products',
+    },
+    {
+      title: 'Categories',
+      to: 'apps-products-categories',
+      icon: { icon: 'tabler-tags' },
+      action: 'read',
+      subject: 'Products',
+    },
+    {
+      title: 'Chat',
+      icon: { icon: 'tabler-message-circle-2' },
+      to: 'apps-chat',
+      action: 'read',
+      subject: 'Apps',
+    },
+    {
+      title: 'Email',
+      icon: { icon: 'tabler-mail' },
+      to: 'apps-email',
+      action: 'read',
+      subject: 'Apps',
+    },
+    {
+      title: 'Calendar',
+      icon: { icon: 'tabler-calendar' },
+      to: 'apps-calendar',
+      action: 'read',
+      subject: 'Apps',
+    },
+  ],
+}
+
+const tenantManagementNavGroup = {
+  title: 'Tenant Management',
+  icon: { icon: 'tabler-users-group' },
+  children: [
+    usersNavItem,
+    {
+      title: 'Businesses',
+      icon: { icon: 'tabler-building-store' },
+      to: { name: 'pages-misc-coming-soon' },
+      action: 'read',
+      subject: 'Apps',
+    },
+    {
+      title: 'Plans',
+      icon: { icon: 'tabler-package' },
+      to: { name: 'pages-misc-coming-soon' },
+      action: 'read',
+      subject: 'Apps',
+    },
+    {
+      title: 'Subscriptions',
+      icon: { icon: 'tabler-calendar-event' },
+      to: { name: 'pages-misc-coming-soon' },
+      action: 'read',
+      subject: 'Apps',
+    },
+  ],
+}
+
+const billingFinanceNavGroup = {
+  title: 'Billing & Finance',
+  icon: { icon: 'tabler-receipt' },
+  children: [
+    {
+      title: 'Invoices & Billing',
+      icon: { icon: 'tabler-receipt-2' },
+      children: [
+        {
+          title: 'Invoice List',
+          to: 'apps-invoice-list',
+          action: 'read',
+          subject: 'Apps',
+        },
+        {
+          title: 'Payment Reports',
+          to: { name: 'pages-misc-coming-soon' },
+          action: 'read',
+          subject: 'Apps',
+        },
+      ],
+    },
+    {
+      title: 'Promo Codes',
+      icon: { icon: 'tabler-ticket' },
+      to: { name: 'pages-misc-coming-soon' },
+      action: 'read',
+      subject: 'Apps',
+    },
+  ],
+}
+
+const salesMarketingNavGroup = {
+  title: 'Sales & Marketing',
+  icon: { icon: 'tabler-target-arrow' },
+  children: [
+    {
+      title: 'CRM',
+      icon: { icon: 'tabler-users' },
+      children: [
+        {
+          title: 'Customers',
+          to: { name: 'pages-misc-coming-soon' },
+          action: 'read',
+          subject: 'Apps',
+        },
+      ],
+    },
+    {
+      title: 'Sales & POS',
+      icon: { icon: 'tabler-cash' },
+      to: { name: 'pages-misc-coming-soon' },
+      action: 'read',
+      subject: 'Apps',
+    },
+    {
+      title: 'Marketing',
+      icon: { icon: 'tabler-mail' },
+      children: [
+        {
+          title: 'Campaigns',
+          to: { name: 'pages-misc-coming-soon' },
+          action: 'read',
+          subject: 'Apps',
+        },
+        {
+          title: 'Email Logs',
+          to: { name: 'pages-misc-coming-soon' },
+          action: 'read',
+          subject: 'Apps',
+        },
+      ],
+    },
+  ],
+}
+
+const analyticsAiNavGroup = {
+  title: 'Analytics & AI',
+  icon: { icon: 'tabler-chart-line' },
+  children: [
+    {
+      title: 'Reports',
+      icon: { icon: 'tabler-chart-bar' },
+      children: [
+        {
+          title: 'Sales',
+          to: { name: 'pages-misc-coming-soon' },
+          action: 'read',
+          subject: 'Apps',
+        },
+        {
+          title: 'Customers',
+          to: { name: 'pages-misc-coming-soon' },
+          action: 'read',
+          subject: 'Apps',
+        },
+        {
+          title: 'Payments',
+          to: { name: 'pages-misc-coming-soon' },
+          action: 'read',
+          subject: 'Apps',
+        },
+      ],
+    },
+    {
+      title: 'AI Insights',
+      icon: { icon: 'tabler-robot' },
+      to: { name: 'pages-misc-coming-soon' },
+      action: 'read',
+      subject: 'Apps',
+    },
+    {
+      title: 'Admin Digest',
+      icon: { icon: 'tabler-news' },
+      to: { name: 'pages-misc-coming-soon' },
+      action: 'read',
+      subject: 'Apps',
+    },
+  ],
+}
+
+const administrationNavGroup = {
+  title: 'Administration',
+  icon: { icon: 'tabler-shield-lock' },
+  children: [
+    {
+      title: 'Audit Logs',
+      icon: { icon: 'tabler-clipboard-list' },
+      to: { name: 'pages-misc-coming-soon' },
+      action: 'read',
+      subject: 'Apps',
+    },
+    {
+      title: 'Account Setting',
+      icon: { icon: 'tabler-settings' },
+      to: {
+        name: 'pages-account-settings-tab',
+        params: { tab: 'account' },
+      },
+    },
+  ],
+}
 
 export default [
-  // { heading: 'Apps & Pages' },
-  // // {
-  //   title: 'Email',
-  //   icon: { icon: 'tabler-mail' },
-  //   to: 'apps-email',
-  // },
-  // {
-  //   title: 'Chat',
-  //   icon: { icon: 'tabler-message-circle-2' },
-  //   to: 'apps-chat',
-  // },
-  // {
-  //   title: 'Calendar',
-  //   icon: { icon: 'tabler-calendar' },
-  //   to: 'apps-calendar',
-  // },
-  // {
-  //   title: 'Kanban',
-  //   icon: { icon: 'tabler-layout-kanban' },
-  //   to: 'apps-kanban',
-  // },
-
-  usersNavItem,
-
-{
-  title: 'Account Setting',
-  icon: { icon: 'tabler-settings' },
-  to: {
-    name: 'pages-account-settings-tab',
-    params: { tab: 'account' },
-  },
-},
-
-
-
-
-  // {
-  //   title: 'Authentication',
-  //   icon: { icon: 'tabler-shield-lock' },
-  //   children: [
-  //     {
-  //       title: 'Login',
-  //       children: [
-  //         { title: 'Login v1', to: 'pages-authentication-login-v1', target: '_blank' },
-  //         { title: 'Login v2', to: 'pages-authentication-login-v2', target: 'blank' },
-  //       ],
-  //     },
-  //     {
-  //       title: 'Register',
-  //       children: [
-  //         { title: 'Register v1', to: 'pages-authentication-register-v1', target: '_blank' },
-  //         { title: 'Register v2', to: 'pages-authentication-register-v2', target: '_blank' },
-  //         { title: 'Register Multi-Steps', to: 'pages-authentication-register-multi-steps', target: '_blank' },
-  //       ],
-  //     },
-  //     {
-  //       title: 'Verify Email',
-  //       children: [
-  //         { title: 'Verify Email v1', to: 'pages-authentication-verify-email-v1', target: '_blank' },
-  //         { title: 'Verify Email v2', to: 'pages-authentication-verify-email-v2', target: '_blank' },
-  //       ],
-  //     },
-  //     {
-  //       title: 'Forgot Password',
-  //       children: [
-  //         { title: 'Forgot Password v1', to: 'pages-authentication-forgot-password-v1', target: '_blank' },
-  //         { title: 'Forgot Password v2', to: 'pages-authentication-forgot-password-v2', target: '_blank' },
-  //       ],
-  //     },
-  //     {
-  //       title: 'Reset Password',
-  //       children: [
-  //         { title: 'Reset Password v1', to: 'pages-authentication-reset-password-v1', target: '_blank' },
-  //         { title: 'Reset Password v2', to: 'pages-authentication-reset-password-v2', target: '_blank' },
-  //       ],
-  //     },
-  //     {
-  //       title: 'Two Steps',
-  //       children: [
-  //         { title: 'Two Steps v1', to: 'pages-authentication-two-steps-v1', target: '_blank' },
-  //         { title: 'Two Steps v2', to: 'pages-authentication-two-steps-v2', target: '_blank' },
-  //       ],
-  //     },
-  //   ],
-  // },
-  // {
-  //   title: 'Wizard Examples',
-  //   icon: { icon: 'tabler-dots' },
-  //   children: [
-  //     { title: 'Checkout', to: { name: 'wizard-examples-checkout' } },
-  //     { title: 'Property Listing', to: { name: 'wizard-examples-property-listing' } },
-  //     { title: 'Create Deal', to: { name: 'wizard-examples-create-deal' } },
-  //   ],
-  // },
-  // {
-  //   title: 'Dialog Examples',
-  //   icon: { icon: 'tabler-square' },
-  //   to: 'pages-dialog-examples',
-  // },
+  operationsNavGroup,
+  tenantManagementNavGroup,
+  billingFinanceNavGroup,
+  salesMarketingNavGroup,
+  analyticsAiNavGroup,
+  administrationNavGroup,
 ]

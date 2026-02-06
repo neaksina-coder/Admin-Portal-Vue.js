@@ -45,6 +45,7 @@ const operationsNavGroup = {
       action: 'read',
       subject: 'Apps',
     },
+     
   ],
 }
 
@@ -56,21 +57,21 @@ const tenantManagementNavGroup = {
     {
       title: 'Businesses',
       icon: { icon: 'tabler-building-store' },
-      to: { name: 'pages-misc-coming-soon' },
+      to: { name: 'businesses-list' },
       action: 'read',
       subject: 'Apps',
     },
     {
       title: 'Plans',
       icon: { icon: 'tabler-package' },
-      to: { name: 'pages-misc-coming-soon' },
+      to: { name: 'plans-list' },
       action: 'read',
       subject: 'Apps',
     },
     {
       title: 'Subscriptions',
       icon: { icon: 'tabler-calendar-event' },
-      to: { name: 'pages-misc-coming-soon' },
+      to: { name: 'subscriptions-list' },
       action: 'read',
       subject: 'Apps',
     },
@@ -82,27 +83,24 @@ const billingFinanceNavGroup = {
   icon: { icon: 'tabler-receipt' },
   children: [
     {
-      title: 'Invoices & Billing',
+      title: 'Invoices',
       icon: { icon: 'tabler-receipt-2' },
-      children: [
-        {
-          title: 'Invoice List',
-          to: 'apps-invoice-list',
-          action: 'read',
-          subject: 'Apps',
-        },
-        {
-          title: 'Payment Reports',
-          to: { name: 'pages-misc-coming-soon' },
-          action: 'read',
-          subject: 'Apps',
-        },
-      ],
+      // children: [
+      //   {
+      //     title: 'Invoice List',
+      //     to: { name: 'invoices-list' },
+      //     action: 'read',
+      //     subject: 'Apps',
+      //   },
+      // ],
+      to: { name: 'invoices-list' },
+      action: 'read',
+      subject: 'Apps',
     },
     {
       title: 'Promo Codes',
       icon: { icon: 'tabler-ticket' },
-      to: { name: 'pages-misc-coming-soon' },
+      to: { name: 'promos-list' },
       action: 'read',
       subject: 'Apps',
     },
@@ -116,19 +114,22 @@ const salesMarketingNavGroup = {
     {
       title: 'CRM',
       icon: { icon: 'tabler-users' },
-      children: [
-        {
-          title: 'Customers',
-          to: { name: 'pages-misc-coming-soon' },
-          action: 'read',
-          subject: 'Apps',
-        },
-      ],
+      // children: [
+      //   {
+      //     title: 'Customers',
+      //     to: { name: 'crm-customers-list' },
+      //     action: 'read',
+      //     subject: 'Apps',
+      //   },
+      // ],\
+      to : { name : 'crm-customers-list' },
+      action: 'read',
+      subject: 'Apps',
     },
     {
       title: 'Sales & POS',
       icon: { icon: 'tabler-cash' },
-      to: { name: 'pages-misc-coming-soon' },
+      to: { name: 'sales-list' },
       action: 'read',
       subject: 'Apps',
     },
@@ -138,13 +139,13 @@ const salesMarketingNavGroup = {
       children: [
         {
           title: 'Campaigns',
-          to: { name: 'pages-misc-coming-soon' },
+          to: { name: 'marketing-campaigns-list' },
           action: 'read',
           subject: 'Apps',
         },
         {
           title: 'Email Logs',
-          to: { name: 'pages-misc-coming-soon' },
+          to: { name: 'marketing-logs' },
           action: 'read',
           subject: 'Apps',
         },
@@ -162,20 +163,26 @@ const analyticsAiNavGroup = {
       icon: { icon: 'tabler-chart-bar' },
       children: [
         {
+          title: 'Dashboard',
+          to: { name: 'reports-dashboard' },
+          action: 'read',
+          subject: 'Apps',
+        },
+        {
           title: 'Sales',
-          to: { name: 'pages-misc-coming-soon' },
+          to: { name: 'reports-sales' },
           action: 'read',
           subject: 'Apps',
         },
         {
           title: 'Customers',
-          to: { name: 'pages-misc-coming-soon' },
+          to: { name: 'reports-customers' },
           action: 'read',
           subject: 'Apps',
         },
         {
           title: 'Payments',
-          to: { name: 'pages-misc-coming-soon' },
+          to: { name: 'reports-payments' },
           action: 'read',
           subject: 'Apps',
         },
@@ -184,14 +191,14 @@ const analyticsAiNavGroup = {
     {
       title: 'AI Insights',
       icon: { icon: 'tabler-robot' },
-      to: { name: 'pages-misc-coming-soon' },
+      to: { name: 'ai-insights-list' },
       action: 'read',
       subject: 'Apps',
     },
     {
       title: 'Admin Digest',
       icon: { icon: 'tabler-news' },
-      to: { name: 'pages-misc-coming-soon' },
+      to: { name: 'admin-digest-daily' },
       action: 'read',
       subject: 'Apps',
     },
@@ -205,7 +212,7 @@ const administrationNavGroup = {
     {
       title: 'Audit Logs',
       icon: { icon: 'tabler-clipboard-list' },
-      to: { name: 'pages-misc-coming-soon' },
+      to: { name: 'audit-logs-list' },
       action: 'read',
       subject: 'Apps',
     },

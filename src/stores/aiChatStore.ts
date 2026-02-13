@@ -28,6 +28,7 @@ export const useAIChatStore = defineStore('aiChat', () => {
   const visitorName = ref('')
   const visitorEmail = ref('')
   const visitorPhone = ref('')
+  const visitorId = ref('')
   const listenersAttached = ref(false)
   const ws = ref<WebSocket | null>(null)
   const wsReady = ref(false)
@@ -107,11 +108,32 @@ export const useAIChatStore = defineStore('aiChat', () => {
     sessionStorage.setItem('ai_conversation_id', id)
   }
 
+  const getStoredVisitorId = () => {
+    if (typeof window === 'undefined')
+      return ''
+
+    return sessionStorage.getItem('ai_visitor_id') || ''
+  }
+
+  const storeVisitorId = (id: string) => {
+    if (typeof window === 'undefined')
+      return
+
+    sessionStorage.setItem('ai_visitor_id', id)
+  }
+
   const clearStoredConversationId = () => {
     if (typeof window === 'undefined')
       return
 
     sessionStorage.removeItem('ai_conversation_id')
+  }
+
+  const clearStoredVisitorId = () => {
+    if (typeof window === 'undefined')
+      return
+
+    sessionStorage.removeItem('ai_visitor_id')
   }
 
   const isValidEmail = (value: string) => /\S+@\S+\.\S+/.test(value)
@@ -213,6 +235,8 @@ export const useAIChatStore = defineStore('aiChat', () => {
     unreadCount.value = 0
     conversationId.value = ''
     clearStoredConversationId()
+    visitorId.value = ''
+    clearStoredVisitorId()
 
     if (ws.value)
       ws.value.close()
@@ -249,12 +273,24 @@ export const useAIChatStore = defineStore('aiChat', () => {
       ?? payload?.data?.id
       ?? payload?.data?.conversationId
       ?? payload?.data?.conversation_id
+    const visitor = payload?.visitor ?? payload?.data?.visitor ?? {}
+    const visitorIdValue = payload?.visitorId
+      ?? payload?.visitor_id
+      ?? payload?.data?.visitorId
+      ?? payload?.data?.visitor_id
+      ?? visitor?.id
+      ?? visitor?.visitorId
+      ?? visitor?.visitor_id
 
     if (!id)
       throw new Error('Conversation id missing')
 
     conversationId.value = String(id)
     storeConversationId(conversationId.value)
+    if (visitorIdValue) {
+      visitorId.value = String(visitorIdValue)
+      storeVisitorId(visitorId.value)
+    }
 
     return conversationId.value
   }
@@ -358,6 +394,9 @@ export const useAIChatStore = defineStore('aiChat', () => {
     }
 
     conversationId.value = id
+    const storedVisitorId = getStoredVisitorId()
+    if (storedVisitorId)
+      visitorId.value = storedVisitorId
   }
 
   const sendMessage = async (text: string) => {
@@ -417,6 +456,24 @@ export const useAIChatStore = defineStore('aiChat', () => {
 
   const uploadFile = async (_file: File) => {
     console.warn('File upload not implemented for realtime chat yet')
+  }
+
+  const uploadVisitorAvatar = async (file: File) => {
+    if (!visitorId.value)
+      return
+
+    const formData = new FormData()
+    formData.append('avatar', file)
+
+    try {
+      await $api(`${CHAT_API_BASE}/visitors/${visitorId.value}`, {
+        method: 'PATCH',
+        body: formData,
+      })
+    }
+    catch (error) {
+      console.error('Upload visitor avatar failed', error)
+    }
   }
 
   const markAsRead = () => {
@@ -488,9 +545,11 @@ export const useAIChatStore = defineStore('aiChat', () => {
     visitorName: computed(() => visitorName.value),
     visitorEmail: computed(() => visitorEmail.value),
     visitorPhone: computed(() => visitorPhone.value),
+    visitorId: computed(() => visitorId.value),
     initialize,
     sendMessage,
     uploadFile,
+    uploadVisitorAvatar,
     markAsRead,
     clearConversation,
     startPolling,

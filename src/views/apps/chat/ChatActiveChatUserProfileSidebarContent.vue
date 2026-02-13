@@ -17,6 +17,30 @@ const contactMeta = computed(() => {
   return (store.chatsContacts.find(c => c.id === id) ?? store.activeChat?.contact) as any
 })
 const visitorMeta = computed(() => contactMeta.value?.visitor ?? {})
+const isUploading = ref(false)
+const fileInput = ref<HTMLInputElement | null>(null)
+
+const triggerUpload = () => {
+  fileInput.value?.click()
+}
+
+const handleUpload = async (event: Event) => {
+  const target = event.target as HTMLInputElement | null
+  const file = target?.files?.[0]
+  if (!file)
+    return
+
+  const visitorId = Number(contactMeta.value?.visitorId ?? visitorMeta.value?.id ?? 0)
+  if (!visitorId)
+    return
+
+  isUploading.value = true
+  await store.uploadVisitorAvatar(visitorId, file)
+  isUploading.value = false
+
+  if (target)
+    target.value = ''
+}
 const isDeleteDialogOpen = ref(false)
 
 const openDeleteDialog = () => {
@@ -65,6 +89,8 @@ const { resolveAvatarBadgeVariant } = useChat()
           size="84"
           :variant="!store.activeChat.contact.avatar ? 'tonal' : undefined"
           :color="!store.activeChat.contact.avatar ? resolveAvatarBadgeVariant(store.activeChat.contact.status) : undefined"
+          class="cursor-pointer"
+          @click="triggerUpload"
         >
           <VImg
             v-if="store.activeChat.contact.avatar"
@@ -82,6 +108,25 @@ const { resolveAvatarBadgeVariant } = useChat()
       <p class="text-capitalize text-body-1 mb-0">
         {{ store.activeChat.contact.role }}
       </p>
+      <div class="text-caption text-disabled mt-2">
+        Click avatar to update
+      </div>
+      <VBtn
+        variant="tonal"
+        size="small"
+        class="mt-2"
+        :loading="isUploading"
+        @click="triggerUpload"
+      >
+        Upload Avatar
+      </VBtn>
+      <input
+        ref="fileInput"
+        type="file"
+        accept="image/*"
+        hidden
+        @change="handleUpload"
+      >
     </div>
 
     <!-- User Data -->

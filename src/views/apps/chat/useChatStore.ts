@@ -20,6 +20,18 @@ const BUSINESS_ID = Number(import.meta.env.VITE_BUSINESS_ID ?? 1)
 const ADMIN_ID = Number(import.meta.env.VITE_ADMIN_ID ?? 1)
 const DUPLICATE_WINDOW_MS = 30000
 const FORCE_REST_SEND = import.meta.env.VITE_CHAT_FORCE_REST === 'true'
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api/v1'
+
+const resolveAssetUrl = (value?: string) => {
+  if (!value)
+    return ''
+
+  if (value.startsWith('http://') || value.startsWith('https://'))
+    return value
+
+  const trimmed = value.startsWith('/') ? value.slice(1) : value
+  return `${API_BASE_URL.replace(/\/$/, '')}/${trimmed}`
+}
 
 export const useChatStore = defineStore('chat', {
   state: (): State => ({
@@ -73,6 +85,7 @@ export const useChatStore = defineStore('chat', {
         ?? item?.client
         ?? item?.lead
         ?? {}
+      const visitorId = Number(item?.visitorId ?? item?.visitor_id ?? visitor?.id ?? visitor?.visitorId ?? visitor?.visitor_id ?? 0)
 
       const rawName = visitor?.name
         ?? visitor?.fullName
@@ -113,6 +126,13 @@ export const useChatStore = defineStore('chat', {
           || 'Website visitor',
       ).trim()
       const lastMsg = item?.lastMessage ?? item?.last_message ?? item?.latestMessage ?? null
+      const avatar = resolveAssetUrl(visitor?.avatar
+        ?? visitor?.avatarUrl
+        ?? visitor?.avatar_url
+        ?? item?.avatar
+        ?? item?.avatarUrl
+        ?? item?.avatar_url
+        ?? '')
 
       const lastMessage: ChatMessage = {
         message: lastMsg?.content ?? lastMsg?.message ?? '',
@@ -130,7 +150,7 @@ export const useChatStore = defineStore('chat', {
         fullName,
         role: 'Website Visitor',
         about,
-        avatar: '',
+        avatar,
         status: 'online',
         chat: {
           id,
@@ -141,6 +161,8 @@ export const useChatStore = defineStore('chat', {
       }
 
       ;(contact as any).visitor = visitor
+      if (visitorId)
+        ;(contact as any).visitorId = visitorId
       if (email)
         ;(contact as any).email = email
       if (phone)
@@ -358,6 +380,70 @@ export const useChatStore = defineStore('chat', {
       const contact = this.chatsContacts.find(c => c.id === conversationId)
       if (contact)
         contact.chat.unseenMsgs = 0
+    },
+
+    async uploadVisitorAvatar(visitorId: number, file: File) {
+      const formData = new FormData()
+      formData.append('avatar', file)
+
+      try {
+        const response = await $api(`${CHAT_API_BASE}/visitors/${visitorId}/avatar`, {
+          method: 'POST',
+          body: formData,
+        })
+
+        const payload = response?.data ? response : response ?? {}
+        const visitor = payload?.visitor ?? payload?.data?.visitor ?? payload?.data ?? payload
+        const avatar = resolveAssetUrl(visitor?.avatar ?? visitor?.avatarUrl ?? visitor?.avatar_url ?? payload?.avatar ?? payload?.data?.avatar ?? '')
+
+        if (!avatar)
+          return
+
+        this.chatsContacts = this.chatsContacts.map((contact) => {
+          const meta = contact as any
+          if (meta?.visitorId === visitorId) {
+            meta.visitor = { ...(meta.visitor ?? {}), avatar }
+            return { ...contact, avatar }
+          }
+
+          return contact
+        })
+
+        if ((this.activeChat?.contact as any)?.visitorId === visitorId) {
+          ;(this.activeChat.contact as any).visitor = { ...((this.activeChat.contact as any).visitor ?? {}), avatar }
+          this.activeChat.contact.avatar = avatar
+        }
+      }
+      catch (error) {
+        console.error('Upload visitor avatar failed', error)
+      }
+    },
+
+    async uploadAdminAvatar(file: File) {
+      const formData = new FormData()
+      formData.append('avatar', file)
+
+      try {
+        const response = await $api(`${CHAT_API_BASE}/admins/me/avatar`, {
+          method: 'POST',
+          body: formData,
+        })
+
+        const payload = response?.data ? response : response ?? {}
+        const avatar = resolveAssetUrl(payload?.avatar
+          ?? payload?.avatarUrl
+          ?? payload?.avatar_url
+          ?? payload?.data?.avatar
+          ?? payload?.data?.avatarUrl
+          ?? payload?.data?.avatar_url
+          ?? '')
+
+        if (this.profileUser && avatar)
+          this.profileUser.avatar = avatar
+      }
+      catch (error) {
+        console.error('Upload admin avatar failed', error)
+      }
     },
 
     async getChat(conversationId: ChatContact['id']) {

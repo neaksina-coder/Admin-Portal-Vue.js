@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import { ref } from 'vue'
 import { PerfectScrollbar } from 'vue3-perfect-scrollbar'
 import { useChat } from './useChat'
 import { useChatStore } from '@/views/apps/chat/useChatStore'
@@ -10,6 +11,8 @@ defineEmits<{
 // composables
 const store = useChatStore()
 const { resolveAvatarBadgeVariant } = useChat()
+const isUploading = ref(false)
+const fileInput = ref<HTMLInputElement | null>(null)
 
 const userStatusRadioOptions = [
   { title: 'Online', value: 'online', color: 'success' },
@@ -20,6 +23,24 @@ const userStatusRadioOptions = [
 
 const isAuthenticationEnabled = ref(true)
 const isNotificationEnabled = ref(false)
+
+const triggerUpload = () => {
+  fileInput.value?.click()
+}
+
+const handleUpload = async (event: Event) => {
+  const target = event.target as HTMLInputElement | null
+  const file = target?.files?.[0]
+  if (!file)
+    return
+
+  isUploading.value = true
+  await store.uploadAdminAvatar(file)
+  isUploading.value = false
+
+  if (target)
+    target.value = ''
+}
 </script>
 
 <template>
@@ -49,6 +70,8 @@ const isNotificationEnabled = ref(false)
           size="84"
           :variant="!store.profileUser.avatar ? 'tonal' : undefined"
           :color="!store.profileUser.avatar ? resolveAvatarBadgeVariant(store.profileUser.status) : undefined"
+          class="cursor-pointer"
+          @click="triggerUpload"
         >
           <VImg
             v-if="store.profileUser.avatar"
@@ -60,6 +83,24 @@ const isNotificationEnabled = ref(false)
           >{{ avatarText(store.profileUser.fullName) }}</span>
         </VAvatar>
       </VBadge>
+      <div class="text-caption text-disabled mb-2">
+        Click avatar to update
+      </div>
+      <VBtn
+        variant="tonal"
+        size="small"
+        :loading="isUploading"
+        @click="triggerUpload"
+      >
+        Upload Avatar
+      </VBtn>
+      <input
+        ref="fileInput"
+        type="file"
+        accept="image/*"
+        hidden
+        @change="handleUpload"
+      >
       <h5 class="text-h5">
         {{ store.profileUser.fullName }}
       </h5>

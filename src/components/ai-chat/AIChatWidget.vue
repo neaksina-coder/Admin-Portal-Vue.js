@@ -51,8 +51,9 @@
                 <span
                   v-else
                   class="ai-avatar-fallback"
+                  :style="{ background: avatarBg }"
                 >
-                  AI
+                  {{ avatarInitials }}
                 </span>
                 <span
                   class="ai-status"
@@ -128,6 +129,15 @@
                   v-model="profilePhone"
                   type="tel"
                   placeholder="+1 555 0100"
+                >
+              </label>
+              <label>
+                Avatar (optional)
+                <input
+                  ref="profileAvatarInput"
+                  type="file"
+                  accept="image/*"
+                  @change="handleAvatarSelect"
                 >
               </label>
               <p
@@ -257,8 +267,28 @@ const requiresProfile = computed(() => chatStore.requiresProfile)
 const profileName = ref('')
 const profileEmail = ref('')
 const profilePhone = ref('')
+const profileAvatarFile = ref<File | null>(null)
+const profileAvatarInput = ref<HTMLInputElement | null>(null)
 const profileError = ref('')
 
+const avatarInitials = computed(() => {
+  const name = (props.aiName || 'AI').trim()
+  const parts = name.split(/\s+/).filter(Boolean)
+  if (parts.length === 1)
+    return parts[0].slice(0, 2).toUpperCase()
+
+  return `${parts[0][0] ?? ''}${parts[1][0] ?? ''}`.toUpperCase()
+})
+
+const avatarBg = computed(() => {
+  const seed = (props.aiName || 'AI').trim()
+  let hash = 0
+  for (let i = 0; i < seed.length; i += 1)
+    hash = ((hash << 5) - hash) + seed.charCodeAt(i)
+
+  const hue = Math.abs(hash) % 360
+  return `linear-gradient(135deg, hsl(${hue} 75% 45%), hsl(${(hue + 40) % 360} 70% 55%))`
+})
 const openChat = () => {
   isOpen.value = true
   chatStore.markAsRead()
@@ -309,6 +339,17 @@ const submitProfile = async () => {
   profileError.value = ''
   chatStore.setVisitorProfile(name, email, phone)
   await chatStore.initialize()
+  if (profileAvatarFile.value) {
+    await chatStore.uploadVisitorAvatar(profileAvatarFile.value)
+    profileAvatarFile.value = null
+    if (profileAvatarInput.value)
+      profileAvatarInput.value.value = ''
+  }
+}
+
+const handleAvatarSelect = (event: Event) => {
+  const target = event.target as HTMLInputElement | null
+  profileAvatarFile.value = target?.files?.[0] ?? null
 }
 
 const clearConversation = () => {
@@ -343,6 +384,7 @@ onMounted(() => {
   profileName.value = chatStore.visitorName
   profileEmail.value = chatStore.visitorEmail
   profilePhone.value = chatStore.visitorPhone
+  profileAvatarFile.value = null
 })
 
 watch(requiresProfile, (next) => {
@@ -350,6 +392,7 @@ watch(requiresProfile, (next) => {
     profileName.value = chatStore.visitorName
     profileEmail.value = chatStore.visitorEmail
     profilePhone.value = chatStore.visitorPhone
+    profileAvatarFile.value = null
     profileError.value = ''
   }
 })

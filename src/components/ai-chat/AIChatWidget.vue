@@ -99,6 +99,55 @@
             </div>
           </header>
 
+          <div
+            v-if="requiresProfile"
+            class="ai-profile-overlay"
+          >
+            <div class="ai-profile-card">
+              <h3>Start a new chat</h3>
+              <p>Please enter your name to create a new conversation.</p>
+              <label>
+                Name
+                <input
+                  v-model="profileName"
+                  type="text"
+                  placeholder="Your name"
+                >
+              </label>
+              <label>
+                Email (optional)
+                <input
+                  v-model="profileEmail"
+                  type="email"
+                  placeholder="you@email.com"
+                >
+              </label>
+              <label>
+                Phone (optional)
+                <input
+                  v-model="profilePhone"
+                  type="tel"
+                  placeholder="+1 555 0100"
+                >
+              </label>
+              <p
+                v-if="profileError"
+                class="ai-profile-error"
+              >
+                {{ profileError }}
+              </p>
+              <div class="ai-profile-actions">
+                <button
+                  type="button"
+                  class="ai-primary-btn"
+                  @click="submitProfile"
+                >
+                  Start chat
+                </button>
+              </div>
+            </div>
+          </div>
+
           <section
             ref="messagesContainer"
             class="ai-messages"
@@ -121,16 +170,17 @@
               :ai-avatar="aiAvatar"
             />
 
-            <TypingIndicator v-if="isTyping" />
+            <TypingIndicator v-if="isTyping && !requiresProfile" />
           </section>
 
           <QuickActions
-            v-if="quickActions.length"
+            v-if="quickActions.length && !requiresProfile"
             :actions="quickActions"
             @action-click="handleQuickAction"
           />
 
           <ChatInput
+            v-if="!requiresProfile"
             v-model="currentMessage"
             :is-sending="isSending"
             @send="sendMessage"
@@ -202,6 +252,12 @@ const isTyping = computed(() => chatStore.isTyping)
 const isSending = computed(() => chatStore.isSending)
 const unreadCount = computed(() => chatStore.unreadCount)
 const isOnline = computed(() => chatStore.isOnline)
+const requiresProfile = computed(() => chatStore.requiresProfile)
+
+const profileName = ref('')
+const profileEmail = ref('')
+const profilePhone = ref('')
+const profileError = ref('')
 
 const openChat = () => {
   isOpen.value = true
@@ -216,7 +272,7 @@ const closeChat = () => {
 }
 
 const sendMessage = async () => {
-  if (!currentMessage.value.trim() || isSending.value)
+  if (requiresProfile.value || !currentMessage.value.trim() || isSending.value)
     return
 
   const message = currentMessage.value.trim()
@@ -233,6 +289,26 @@ const handleQuickAction = (action: QuickAction) => {
 const handleFileUpload = async (file: File) => {
   await chatStore.uploadFile(file)
   scrollToBottom()
+}
+
+const submitProfile = async () => {
+  const name = profileName.value.trim()
+  const email = profileEmail.value.trim()
+  const phone = profilePhone.value.trim()
+
+  if (!name) {
+    profileError.value = 'Name is required.'
+    return
+  }
+
+  if (email && !/\S+@\S+\.\S+/.test(email)) {
+    profileError.value = 'Enter a valid email.'
+    return
+  }
+
+  profileError.value = ''
+  chatStore.setVisitorProfile(name, email, phone)
+  await chatStore.initialize()
 }
 
 const clearConversation = () => {
@@ -263,11 +339,25 @@ watch(
 onMounted(() => {
   document.addEventListener('keydown', handleKeyPress)
   chatStore.initialize()
+
+  profileName.value = chatStore.visitorName
+  profileEmail.value = chatStore.visitorEmail
+  profilePhone.value = chatStore.visitorPhone
+})
+
+watch(requiresProfile, (next) => {
+  if (next) {
+    profileName.value = chatStore.visitorName
+    profileEmail.value = chatStore.visitorEmail
+    profilePhone.value = chatStore.visitorPhone
+    profileError.value = ''
+  }
 })
 
 onBeforeUnmount(() => {
   document.removeEventListener('keydown', handleKeyPress)
   document.body.style.overflow = ''
+  chatStore.stopPolling()
 })
 </script>
 
@@ -371,6 +461,75 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+}
+
+.ai-profile-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+  display: grid;
+  place-items: center;
+  z-index: 5;
+  padding: 24px;
+}
+
+.ai-profile-card {
+  width: min(420px, 92vw);
+  background: var(--ai-card);
+  border-radius: 18px;
+  padding: 22px;
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.2);
+  color: var(--ai-ink);
+}
+
+.ai-profile-card h3 {
+  margin: 0 0 6px;
+  font-size: 18px;
+}
+
+.ai-profile-card p {
+  margin: 0 0 14px;
+  color: var(--ai-muted);
+  font-size: 13px;
+}
+
+.ai-profile-card label {
+  display: grid;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--ai-muted);
+  margin-bottom: 12px;
+}
+
+.ai-profile-card input {
+  height: 38px;
+  border-radius: 10px;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  padding: 0 12px;
+  font-size: 14px;
+  color: var(--ai-ink);
+  background: white;
+}
+
+.ai-profile-error {
+  margin: 0 0 12px;
+  color: #dc2626;
+  font-size: 12px;
+}
+
+.ai-profile-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.ai-primary-btn {
+  border: none;
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: linear-gradient(140deg, var(--ai-primary), var(--ai-accent));
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
 }
 
 .ai-header {

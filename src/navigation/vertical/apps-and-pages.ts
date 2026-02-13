@@ -168,18 +168,7 @@ const analyticsAiNavGroup = {
           action: 'read',
           subject: 'Apps',
         },
-        {
-          title: 'Sales',
-          to: { name: 'reports-sales' },
-          action: 'read',
-          subject: 'Apps',
-        },
-        {
-          title: 'Customers',
-          to: { name: 'reports-customers' },
-          action: 'read',
-          subject: 'Apps',
-        },
+       
         {
           title: 'Payments',
           to: { name: 'reports-payments' },

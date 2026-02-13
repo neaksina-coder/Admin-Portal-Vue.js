@@ -7,12 +7,12 @@ import rocket from '@images/svg/rocket.svg'
 import user from '@images/svg/user.svg'
 
 const featuresData = [
-  { title: 'Quality Code', desc: 'Code structure that all developers will easily understand and fall in love with.', icon: laptop },
-  { title: 'Continuous Updates', desc: 'Free updates for the next 12 months, including new demos and features.', icon: rocket },
-  { title: 'Starter Kit', desc: 'Start your project quickly without having to remove unnecessary features.', icon: paper },
-  { title: 'API Ready', desc: 'Just change the endpoint and see your own data loaded within seconds.', icon: check },
-  { title: 'Excellent Support', desc: 'An easy-to-follow doc with lots of references and code examples.', icon: user },
-  { title: 'Well Documented', desc: 'An easy-to-follow doc with lots of references and code examples.', icon: keyboard },
+  { title: 'CRM Tools', desc: 'Customer profiles, segmentation, and contact history in one place.', icon: user },
+  { title: 'Marketing Tools', desc: 'Create campaigns, send emails, and track delivery performance.', icon: paper },
+  { title: 'HR Tools', desc: 'Manage teams, roles, and internal workflows with clarity.', icon: keyboard },
+  { title: 'POS Tools', desc: 'Track sales, invoices, and discounts across your business.', icon: laptop },
+  { title: 'AI Analytics', desc: 'AI insights to improve decisions and growth.', icon: rocket },
+  { title: 'Smart Support', desc: 'AI Smart Guide to answer questions and recommend plans.', icon: check },
 ]
 </script>
 

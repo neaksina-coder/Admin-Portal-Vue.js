@@ -1,11 +1,11 @@
 <template>
-  <div :class="['ai-message', message.sender === 'user' ? 'ai-message-user' : 'ai-message-ai']">
+  <div :class="['ai-message', message.sender === 'visitor' ? 'ai-message-user' : 'ai-message-ai']">
     <div
-      v-if="message.sender === 'ai'"
+      v-if="message.sender !== 'visitor'"
       class="ai-message-avatar"
     >
       <img
-        v-if="aiAvatar"
+        v-if="aiAvatar && message.sender === 'ai'"
         :src="aiAvatar"
         alt="AI"
       >
@@ -13,7 +13,7 @@
         v-else
         class="ai-message-avatar-fallback"
       >
-        AI
+        {{ message.sender === 'admin' ? 'AD' : 'AI' }}
       </span>
     </div>
     <div class="ai-message-bubble">
@@ -29,7 +29,7 @@ import { computed } from 'vue'
 interface ChatMessagePayload {
   id: number | string
   text: string
-  sender: 'user' | 'ai'
+  sender: 'visitor' | 'ai' | 'admin'
   timestamp: string
 }
 

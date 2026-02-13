@@ -30,7 +30,35 @@ watch(() => display, () => {
   return display.mdAndUp ? sidebar.value = false : sidebar.value
 }, { deep: true })
 
-const navSections = ['Home', 'Features', 'Team', 'FAQ', 'Contact us']
+const route = useRoute()
+const isLanding = computed(() => !!props.activeId)
+
+const navItems = computed(() => {
+  if (isLanding.value) {
+    return [
+      { label: 'Home', to: { name: 'front-pages-landing-page', hash: '#home' }, id: 'home' },
+      { label: 'Features', to: { name: 'front-pages-landing-page', hash: '#features' }, id: 'features' },
+      { label: 'Pricing', to: { name: 'front-pages-landing-page', hash: '#pricing-plan' }, id: 'pricing-plan' },
+      { label: 'AI Guide', to: { name: 'front-pages-landing-page', hash: '#ai-guide' }, id: 'ai-guide' },
+      { label: 'Contact', to: { name: 'front-pages-landing-page', hash: '#contact-us' }, id: 'contact-us' },
+    ]
+  }
+
+  return [
+    { label: 'Home', to: { name: 'front-pages-landing-page' } },
+    { label: 'Features', to: { name: 'front-pages-features' } },
+    { label: 'Pricing', to: { name: 'front-pages-pricing' } },
+    { label: 'AI Guide', to: { name: 'front-pages-ai-guide' } },
+    { label: 'Contact', to: { name: 'front-pages-contact' } },
+  ]
+})
+
+const isActiveLink = (item: { id?: string; to?: any }) => {
+  if (isLanding.value && item.id)
+    return props.activeId?.toLocaleLowerCase().replace('-', ' ') === item.id.toLocaleLowerCase().replace('-', ' ')
+
+  return route.name === item.to?.name
+}
 
 const logout = () => {
   userData.value = null
@@ -55,13 +83,13 @@ const logout = () => {
     >
       <div class="d-flex flex-column gap-y-4 pa-4">
         <RouterLink
-          v-for="(item, index) in navSections"
-          :key="index"
-          :to="{ name: 'front-pages-landing-page', hash: `#${item.toLowerCase().replace(' ', '-')}` }"
+          v-for="item in navItems"
+          :key="item.label"
+          :to="item.to"
           class="nav-link font-weight-medium"
-          :class="[props.activeId?.toLocaleLowerCase().replace('-', ' ') === item.toLocaleLowerCase() ? 'active-link' : '']"
+          :class="[isActiveLink(item) ? 'active-link' : '']"
         >
-          {{ item }}
+          {{ item.label }}
         </RouterLink>
 
         <VDivider class="my-2" />
@@ -140,13 +168,13 @@ const logout = () => {
 
           <div class="text-base align-center d-none d-md-flex">
             <RouterLink
-              v-for="(item, index) in navSections"
-              :key="index"
-              :to="{ name: 'front-pages-landing-page', hash: `#${item.toLowerCase().replace(' ', '-')}` }"
+              v-for="item in navItems"
+              :key="item.label"
+              :to="item.to"
               class="nav-link font-weight-medium py-2 px-2 px-lg-4"
-              :class="[props.activeId?.toLocaleLowerCase().replace('-', ' ') === item.toLocaleLowerCase() ? 'active-link' : '']"
+              :class="[isActiveLink(item) ? 'active-link' : '']"
             >
-              {{ item }}
+              {{ item.label }}
             </RouterLink>
           </div>
         </div>

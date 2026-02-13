@@ -56,28 +56,92 @@ const headers = [
   { title: 'Payment Date', key: 'paymentDate' },
 ]
 
-const { data: reportData, execute: fetchReports, isFetching } = await useApi<any>(createUrl('/reports/payments', {
-  query: {
-    businessId: filters.businessId || undefined,
-    status: filters.status || undefined,
-    skip: computed(() => (page.value - 1) * itemsPerPage.value),
-    limit: itemsPerPage,
-    sortBy,
-    orderBy,
+const mockReports = ref<PaymentReportItem[]>([
+  {
+    id: 1001,
+    businessId: 12,
+    subscriptionId: 502,
+    amount: 49,
+    currency: 'USD',
+    paymentStatus: 'paid',
+    paymentMethod: 'Card',
+    dueDate: '2026-01-15',
+    paymentDate: '2026-01-12',
+    created_at: '2026-01-12',
   },
-}))
+  {
+    id: 1002,
+    businessId: 12,
+    subscriptionId: 503,
+    amount: 99,
+    currency: 'USD',
+    paymentStatus: 'pending',
+    paymentMethod: 'Bank Transfer',
+    dueDate: '2026-01-20',
+    paymentDate: null,
+    created_at: '2026-01-10',
+  },
+  {
+    id: 1003,
+    businessId: 17,
+    subscriptionId: 610,
+    amount: 149,
+    currency: 'USD',
+    paymentStatus: 'failed',
+    paymentMethod: 'Card',
+    dueDate: '2026-01-18',
+    paymentDate: null,
+    created_at: '2026-01-09',
+  },
+  {
+    id: 1004,
+    businessId: 21,
+    subscriptionId: 702,
+    amount: 29,
+    currency: 'USD',
+    paymentStatus: 'refunded',
+    paymentMethod: 'Card',
+    dueDate: '2026-01-05',
+    paymentDate: '2026-01-04',
+    created_at: '2026-01-04',
+  },
+  {
+    id: 1005,
+    businessId: 21,
+    subscriptionId: 703,
+    amount: 199,
+    currency: 'USD',
+    paymentStatus: 'overdue',
+    paymentMethod: 'Cash',
+    dueDate: '2026-01-02',
+    paymentDate: null,
+    created_at: '2025-12-29',
+  },
+])
+
+const filteredReports = computed<PaymentReportItem[]>(() => {
+  const businessId = Number(filters.businessId)
+  return mockReports.value.filter(item => {
+    if (filters.businessId && item.businessId !== businessId)
+      return false
+    if (filters.status && item.paymentStatus !== filters.status)
+      return false
+    return true
+  })
+})
 
 const reports = computed<PaymentReportItem[]>(() => {
-  const payload = reportData.value
-  const list = payload?.items ?? payload?.data ?? payload?.results ?? payload?.payments ?? []
-
-  return Array.isArray(list) ? list : []
+  const start = (page.value - 1) * itemsPerPage.value
+  const end = start + itemsPerPage.value
+  return filteredReports.value.slice(start, end)
 })
 
-const totalReports = computed(() => {
-  const payload = reportData.value
-  return payload?.total ?? payload?.count ?? payload?.totalItems ?? reports.value.length
-})
+const totalReports = computed(() => filteredReports.value.length)
+
+const isFetching = ref(false)
+const fetchReports = () => {
+  isFetching.value = false
+}
 
 const resolvePaymentStatusColor = (status: PaymentStatus) => {
   if (status === 'paid')

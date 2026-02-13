@@ -77,21 +77,21 @@ onMounted(() => {
                 icon="mdi-sparkles"
                 start
               />
-              New Feature Available
+              AI Smart Guide Ready
             </VChip>
           </div>
 
           <!-- Main Title -->
           <div class="text-center hero-text-box">
             <h1 class="hero-title mb-6">
-              Transform Your Business
-              <span class="gradient-text">With AI-Powered</span>
-              Solutions
+              AI Business Platform
+              <span class="gradient-text">Official Website</span>
+              for Modern Teams
             </h1>
             
             <p class="hero-subtitle text-h6 text-medium-emphasis mb-8">
-              Streamline operations, boost productivity, and scale your business 
-              with our cutting-edge platform designed for modern teams.
+              CRM, Marketing, HR, POS, and AI Analytics in one platform.
+              Learn fast, choose the right plan, and grow with confidence.
             </p>
 
             <!-- CTA Buttons -->
@@ -100,13 +100,13 @@ onMounted(() => {
                 size="x-large"
                 color="primary"
                 class="hero-btn-primary"
-                :to="{ name: 'front-pages-landing-page', hash: `#pricing-plan` }"
+                :to="{ name: 'front-pages-pricing' }"
               >
                 <VIcon
                   icon="mdi-rocket-launch"
                   start
                 />
-                Get Started Free
+                View Pricing
               </VBtn>
               
               <VBtn
@@ -114,12 +114,13 @@ onMounted(() => {
                 variant="outlined"
                 color="primary"
                 class="hero-btn-secondary"
+                :to="{ name: 'front-pages-ai-guide' }"
               >
                 <VIcon
                   icon="mdi-play-circle"
                   start
                 />
-                Watch Demo
+                Open AI Guide
               </VBtn>
             </div>
 
@@ -155,10 +156,10 @@ onMounted(() => {
       <VRow class="feature-highlights mt-16">
         <VCol
           v-for="(feature, index) in [
-            { icon: 'mdi-chart-timeline-variant', title: 'Advanced Analytics', color: 'primary' },
-            { icon: 'mdi-shield-lock', title: 'Bank-Level Security', color: 'success' },
-            { icon: 'mdi-lightning-bolt', title: 'Lightning Fast', color: 'warning' },
-            { icon: 'mdi-account-group', title: 'Team Collaboration', color: 'info' }
+            { icon: 'mdi-chart-timeline-variant', title: 'AI Analytics', color: 'primary' },
+            { icon: 'mdi-bullhorn', title: 'Marketing Tools', color: 'success' },
+            { icon: 'mdi-cash', title: 'POS & Sales', color: 'warning' },
+            { icon: 'mdi-account-group', title: 'CRM & Teams', color: 'info' }
           ]"
           :key="index"
           cols="6"

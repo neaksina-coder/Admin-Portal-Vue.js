@@ -167,7 +167,7 @@ const updateMailLabel = async (label: Email['labels'][number]) => {
             <VList density="compact">
               <template
                 v-for="moveTo in emailMoveToFolderActions"
-                :key="moveTo.title"
+                :key="moveTo.action"
               >
                 <VListItem
                   :class="shallShowMoveToActionFor(moveTo.action) ? 'd-flex' : 'd-none'"

@@ -20,13 +20,18 @@ type EmailLogItem = {
 }
 
 const filters = reactive({
+  businessId: '',
   campaignId: '',
 })
+
+const businesses = ref<{ title: string; value: number }[]>([])
+const campaigns = ref<{ title: string; value: number }[]>([])
 
 const itemsPerPage = ref(20)
 const page = ref(1)
 const sortBy = ref()
 const orderBy = ref()
+const isFetching = ref(false)
 
 const headers = [
   { title: 'ID', key: 'id' },
@@ -41,37 +46,108 @@ const updateOptions = (options: any) => {
   orderBy.value = options.sortBy[0]?.order
 }
 
-const requestPath = computed(() => {
+const route = useRoute()
+
+const logs = ref<EmailLogItem[]>([])
+const totalLogs = ref(0)
+
+const loadBusinesses = async () => {
+  try {
+    const response = await $api('/businesses')
+    const payload = response?.data ? response : response ?? {}
+    const list = payload?.items ?? payload?.data ?? payload?.businesses ?? payload?.results ?? []
+    businesses.value = Array.isArray(list)
+      ? list.map((item: any) => ({
+          title: item.name ?? item.tenantId ?? String(item.id),
+          value: Number(item.id),
+        }))
+      : []
+  }
+  catch (error) {
+    console.error(error)
+  }
+}
+
+const loadCampaigns = async () => {
+  if (!filters.businessId) {
+    campaigns.value = []
+    filters.campaignId = ''
+    return
+  }
+
+  try {
+    const requestUrl = createUrl('/marketing', {
+      query: {
+        businessId: computed(() => filters.businessId || undefined),
+        skip: 0,
+        limit: 100,
+      },
+    })
+    const response = await $api(requestUrl.value)
+    const payload = response?.data ? response : response ?? {}
+    const list = payload?.items ?? payload?.data ?? payload?.campaigns ?? payload?.results ?? []
+    campaigns.value = Array.isArray(list)
+      ? list.map((item: any) => ({
+          title: item.name ?? `Campaign ${item.id}`,
+          value: Number(item.id),
+        }))
+      : []
+  }
+  catch (error) {
+    console.error(error)
+  }
+}
+
+const resolveCampaignName = (campaignId: number) => {
+  const match = campaigns.value.find(item => item.value === campaignId)
+  return match?.title ?? campaignId
+}
+
+const requestUrl = computed(() => {
   if (!filters.campaignId)
     return null
-  return `/marketing/${filters.campaignId}/logs`
+
+  return createUrl(`/marketing/${filters.campaignId}/logs`, {
+    query: {
+      skip: computed(() => (page.value - 1) * itemsPerPage.value),
+      limit: itemsPerPage,
+      sortBy,
+      orderBy,
+    },
+  }).value
 })
 
-const { data: logsData, execute: fetchLogs, isFetching } = await useApi<any>(createUrl(requestPath, {
-  query: {
-    skip: computed(() => (page.value - 1) * itemsPerPage.value),
-    limit: itemsPerPage,
-    sortBy,
-    orderBy,
-  },
-}))
+const loadLogs = async () => {
+  if (!requestUrl.value) {
+    logs.value = []
+    totalLogs.value = 0
+    return
+  }
 
-const logs = computed<EmailLogItem[]>(() => {
-  const payload = logsData.value
-  const list = payload?.items ?? payload?.data ?? payload?.logs ?? payload?.results ?? []
-
-  return Array.isArray(list) ? list : []
-})
-
-const totalLogs = computed(() => {
-  const payload = logsData.value
-  return payload?.total ?? payload?.count ?? payload?.totalItems ?? logs.value.length
-})
-
-const loadLogs = () => {
-  if (requestPath.value)
-    fetchLogs()
+  try {
+    isFetching.value = true
+    const response = await $api(requestUrl.value)
+    const payload = response?.data ? response : response ?? {}
+    const list = payload?.items ?? payload?.data ?? payload?.logs ?? payload?.results ?? []
+    logs.value = Array.isArray(list) ? list : []
+    totalLogs.value = payload?.total ?? payload?.count ?? payload?.totalItems ?? logs.value.length
+  }
+  catch (error) {
+    console.error(error)
+  }
+  finally {
+    isFetching.value = false
+  }
 }
+
+onMounted(() => {
+  const campaignId = route.query.campaignId
+  if (campaignId)
+    filters.campaignId = String(campaignId)
+
+  loadBusinesses()
+  loadLogs()
+})
 </script>
 
 <template>
@@ -83,14 +159,28 @@ const loadLogs = () => {
 
       <VCardText>
         <VRow>
-          <VCol cols="12" sm="6">
-            <AppTextField
-              v-model="filters.campaignId"
-              label="Campaign ID"
-              placeholder="Enter campaign id"
+          <VCol cols="12" sm="6" md="4">
+            <AppSelect
+              v-model="filters.businessId"
+              :items="businesses"
+              label="Business"
+              placeholder="Select business"
+              clearable
+              clear-icon="tabler-x"
+              @update:model-value="loadCampaigns"
             />
           </VCol>
-          <VCol cols="12" sm="6" class="d-flex align-end">
+          <VCol cols="12" sm="6" md="5">
+            <AppSelect
+              v-model="filters.campaignId"
+              :items="campaigns"
+              label="Campaign"
+              placeholder="Select campaign"
+              clearable
+              clear-icon="tabler-x"
+            />
+          </VCol>
+          <VCol cols="12" md="3" class="d-flex align-end">
             <VBtn color="primary" @click="loadLogs">
               Search
             </VBtn>
@@ -114,6 +204,9 @@ const loadLogs = () => {
         class="text-no-wrap"
         @update:options="updateOptions"
       >
+        <template #item.campaignId="{ item }">
+          <span>{{ resolveCampaignName(item.campaignId) }}</span>
+        </template>
         <template #item.created_at="{ item }">
           <span>{{ item.created_at ? formatDate(item.created_at) : '-' }}</span>
         </template>

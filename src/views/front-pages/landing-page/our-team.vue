@@ -5,10 +5,10 @@ import teamPerson3 from '@images/front-pages/landing-page/team-member-3.png'
 import teamPerson4 from '@images/front-pages/landing-page/team-member-4.png'
 
 const teamData = ref([
-  { name: 'Sophie Gilbert', position: 'Project Manager', image: teamPerson1, backgroundColor: 'rgba(144, 85, 253, 0.16)', borderColor: 'rgba(144, 85, 253,0.16)', isHover: false },
-  { name: 'Paul Miles', position: 'UI Designer', image: teamPerson2, backgroundColor: 'rgba(22, 177, 255, 0.16)', borderColor: 'rgba(22, 177, 255,0.16)', isHover: false },
-  { name: 'Nannie Ford', position: 'Development Lead', image: teamPerson3, backgroundColor: 'rgba(255, 76, 81, 0.16)', borderColor: 'rgba(255, 76, 81,0.16)', isHover: false },
-  { name: 'Chris Watkins', position: 'Marketing Manager', image: teamPerson4, backgroundColor: 'rgba(86, 202, 0, 0.16)', borderColor: 'rgba(86, 202, 0,0.16)', isHover: false },
+  { name: 'Pheara Tim', position: 'Product & CRM Lead', image: teamPerson1, backgroundColor: 'rgba(144, 85, 253, 0.16)', borderColor: 'rgba(144, 85, 253,0.16)', isHover: false },
+  { name: 'Dara Chen', position: 'UI/UX Designer', image: teamPerson2, backgroundColor: 'rgba(22, 177, 255, 0.16)', borderColor: 'rgba(22, 177, 255,0.16)', isHover: false },
+  { name: 'Sokha Tran', position: 'Engineering Lead', image: teamPerson3, backgroundColor: 'rgba(255, 76, 81, 0.16)', borderColor: 'rgba(255, 76, 81,0.16)', isHover: false },
+  { name: 'Maly Kim', position: 'Marketing & Growth', image: teamPerson4, backgroundColor: 'rgba(86, 202, 0, 0.16)', borderColor: 'rgba(86, 202, 0,0.16)', isHover: false },
 ])
 </script>
 

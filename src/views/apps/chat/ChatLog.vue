@@ -29,7 +29,7 @@ const msgGroups = computed(() => {
 
   const _msgGroups: MessageGroup[] = []
 
-  if (store.activeChat!.chat) {
+  if (store.activeChat?.chat && store.activeChat.chat.messages.length) {
     messages = store.activeChat!.chat.messages
 
     let msgSenderId = messages[0].senderId

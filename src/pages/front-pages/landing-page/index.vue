@@ -28,6 +28,7 @@ const activeSectionId = ref()
 
 const refHome = ref()
 const refFeatures = ref()
+const refAiGuide = ref()
 const refTeam = ref()
 const refContact = ref()
 const refFaq = ref()
@@ -35,28 +36,28 @@ const refFaq = ref()
 const quickActions = [
   {
     id: 1,
-    label: 'Summarize this page',
-    icon: 'M4 6h16M4 12h10M4 18h14',
-  },
-  {
-    id: 2,
-    label: 'Help me get started',
-    icon: 'M12 5v14M5 12h14',
-  },
-  {
-    id: 3,
-    label: 'Show pricing options',
+    label: 'Recommend a plan',
     icon: 'M4 8h16M6 8v8M18 8v8M4 16h16',
   },
   {
-    id: 4,
-    label: 'Talk to support',
+    id: 2,
+    label: 'Explain CRM tools',
     icon: 'M6 9h12M8 13h8M9 17h6',
+  },
+  {
+    id: 3,
+    label: 'Explain AI analytics',
+    icon: 'M4 6h16M4 12h10M4 18h14',
+  },
+  {
+    id: 4,
+    label: 'Help me sign up',
+    icon: 'M12 5v14M5 12h14',
   },
 ]
 
 useIntersectionObserver(
-  [refHome, refFeatures, refTeam, refContact, refFaq],
+  [refHome, refFeatures, refAiGuide, refTeam, refContact, refFaq],
   ([{ isIntersecting, target }]) => {
     if (isIntersecting)
       activeSectionId.value = target.id
@@ -77,6 +78,48 @@ useIntersectionObserver(
     <!-- 👉 Useful features  -->
     <div :style="{ 'background-color': 'rgb(var(--v-theme-surface))' }">
       <Features ref="refFeatures" />
+    </div>
+
+    <div :style="{ 'background-color': 'rgb(var(--v-theme-background))' }">
+      <VContainer
+        id="ai-guide"
+        ref="refAiGuide"
+        class="py-16"
+      >
+        <VRow align="center">
+          <VCol cols="12" md="7">
+            <VChip label color="primary" size="small" class="mb-4">
+              AI Smart Guide
+            </VChip>
+            <h3 class="text-h4 font-weight-bold mb-3">
+              Get the Right Plan in Minutes
+            </h3>
+            <p class="text-body-1 text-medium-emphasis mb-6">
+              Ask our AI Smart Guide about features, pricing, and setup. It recommends tools and
+              a plan based on your business type.
+            </p>
+            <div class="d-flex gap-3 flex-wrap">
+              <VBtn color="primary" :to="{ name: 'front-pages-ai-guide' }">
+                Open AI Guide
+              </VBtn>
+              <VBtn variant="tonal" color="secondary" :to="{ name: 'front-pages-pricing' }">
+                View Pricing
+              </VBtn>
+            </div>
+          </VCol>
+          <VCol cols="12" md="5">
+            <VCard variant="tonal" class="pa-6 rounded-lg">
+              <h5 class="text-h5 mb-4">AI Flow</h5>
+              <VList density="compact">
+                <VListItem title="Business type →" />
+                <VListItem title="Suggested tools →" />
+                <VListItem title="Recommended plan →" />
+                <VListItem title="Signup guidance" />
+              </VList>
+            </VCard>
+          </VCol>
+        </VRow>
+      </VContainer>
     </div>
 
     <!-- 👉 Customer Review -->
@@ -109,7 +152,7 @@ useIntersectionObserver(
     <ContactUs ref="refContact" />
 
     <AIChatWidget
-      ai-name="Sina AI"
+      ai-name="Smart  AI"
       :ai-avatar="aiAvatar"
       welcome-message="Ask anything about our platform, plans, or setup."
       :quick-actions="quickActions"

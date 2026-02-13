@@ -1,26 +1,26 @@
 <script setup lang="ts">
-import boyWithLogo from '@images/front-pages/landing-page/faq-boy-with-logos.png'
+import dashboardPreview from '@images/front-pages/landing-page/cta-dashboard.png'
 
 const faqData = [
   {
-    question: 'Do you charge for each upgrade?',
-    answer: 'Lemon drops chocolate cake gummies carrot cake chupa chups muffin topping. Sesame snaps icing marzipan gummi bears macaroon dragée danish caramels powder. Bear claw dragée pastry topping soufflé. Wafer gummi bears marshmallow pastry pie.',
+    question: 'What does the AI Business Platform include?',
+    answer: 'CRM, Marketing, HR, POS, and AI Analytics in one platform, plus the AI Smart Guide for plan selection.',
   },
   {
-    question: 'Do I need to purchase a license for each website?',
-    answer: 'Dessert ice cream donut oat cake jelly-o pie sugar plum cheesecake. Bear claw dragée oat cake dragée ice cream halvah tootsie roll. Danish cake oat cake pie macaroon tart donut gummies. Jelly beans candy canes carrot cake. Fruitcake chocolate chupa chups.',
+    question: 'Can I start with a basic plan and upgrade later?',
+    answer: 'Yes. You can upgrade anytime as your team or business grows.',
   },
   {
-    question: 'What is regular license?',
-    answer: 'Regular license can be used for end products that do not charge users for access or service(access is free and there will be no monthly subscription fee). Single regular license can be used for single end product and end product can be used by you or your client. If you want to sell end product to multiple clients then you will need to purchase separate license for each client. The same rule applies if you want to use the same end product on multiple domains(unique setup). For more info on regular license you can check official description.',
+    question: 'How does the AI Smart Guide help?',
+    answer: 'It asks about your business type and goals, then recommends tools and the best pricing plan.',
   },
   {
-    question: 'What is extended license?',
-    answer: 'Lorem ipsum dolor sit amet consectetur adipisicing elit. Nobis et aliquid quaerat possimus maxime! Mollitia reprehenderit neque repellat deleniti delectus architecto dolorum maxime, blanditiis earum ea, incidunt quam possimus cumque.',
+    question: 'Does the platform connect to billing and customer portal?',
+    answer: 'Yes. It integrates with authentication, payment, and the customer portal for a complete workflow.',
   },
   {
-    question: 'Which license is applicable for SASS application?',
-    answer: 'Lorem ipsum dolor sit amet consectetur, adipisicing elit. Sequi molestias exercitationem ab cum nemo facere voluptates veritatis quia, eveniet veniam at et repudiandae mollitia ipsam quasi labore enim architecto non!',
+    question: 'Is my business data secure?',
+    answer: 'We use secure authentication and role-based access to protect your data.',
   },
 ]
 </script>
@@ -28,7 +28,7 @@ const faqData = [
 <template>
   <div id="faq">
     <VContainer>
-      <!-- 👉 Header  -->
+      <!-- ?? Header  -->
       <div class="faq-section">
         <div class="headers d-flex justify-center flex-column align-center">
           <VChip
@@ -58,7 +58,7 @@ const faqData = [
           >
             <div class="pt-10 d-flex align-center justify-center h-100">
               <VImg
-                :src="boyWithLogo"
+                :src="dashboardPreview"
                 height="330"
                 width="330"
               />

@@ -42,6 +42,14 @@ watch(
   { immediate: true },
 )
 
+onMounted(() => {
+  store.startPolling()
+})
+
+onBeforeUnmount(() => {
+  store.stopPolling()
+})
+
 // Open Sidebar in smAndDown when "start conversation" is clicked
 const startConversation = () => {
   if (vuetifyDisplays.mdAndUp.value)

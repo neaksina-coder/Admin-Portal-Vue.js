@@ -26,7 +26,6 @@ const isChatContactActive = computed(() => {
 
 <template>
   <li
-    :key="store.chatsContacts.length"
     class="chat-contact cursor-pointer d-flex align-center"
     :class="{ 'chat-contact-active': isChatContactActive }"
   >
@@ -49,7 +48,7 @@ const isChatContactActive = computed(() => {
           :src="props.user.avatar"
           alt="John Doe"
         />
-        <span v-else>{{ avatarText(user.fullName) }}</span>
+        <span v-else>{{ avatarText(props.user.fullName) }}</span>
       </VAvatar>
     </VBadge>
     <div class="flex-grow-1 ms-4 overflow-hidden">

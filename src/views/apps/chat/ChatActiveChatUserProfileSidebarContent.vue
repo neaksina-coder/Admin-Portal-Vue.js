@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import { computed, ref } from 'vue'
 import { PerfectScrollbar } from 'vue3-perfect-scrollbar'
 import { useChat } from './useChat'
 import { useChatStore } from '@/views/apps/chat/useChatStore'
@@ -8,6 +9,29 @@ defineEmits<{
 }>()
 
 const store = useChatStore()
+const contactMeta = computed(() => {
+  const id = store.activeChat?.contact?.id
+  if (!id)
+    return store.activeChat?.contact as any
+
+  return (store.chatsContacts.find(c => c.id === id) ?? store.activeChat?.contact) as any
+})
+const visitorMeta = computed(() => contactMeta.value?.visitor ?? {})
+const isDeleteDialogOpen = ref(false)
+
+const openDeleteDialog = () => {
+  if (!store.activeChat?.contact.id)
+    return
+  isDeleteDialogOpen.value = true
+}
+
+const confirmDelete = async () => {
+  if (!store.activeChat?.contact.id)
+    return
+
+  isDeleteDialogOpen.value = false
+  await store.deleteConversation(Number(store.activeChat.contact.id))
+}
 
 const { resolveAvatarBadgeVariant } = useChat()
 </script>
@@ -87,7 +111,7 @@ const { resolveAvatarBadgeVariant } = useChat()
             size="22"
           />
           <div class="text-base">
-            lucifer@email.com
+            {{ visitorMeta?.email || contactMeta?.email || 'Not provided' }}
           </div>
         </div>
         <div class="d-flex align-center text-high-emphasis pa-2">
@@ -97,17 +121,83 @@ const { resolveAvatarBadgeVariant } = useChat()
             size="22"
           />
           <div class="text-base">
-            +1(123) 456 - 7890
+            {{ visitorMeta?.phone || contactMeta?.phone || 'Not provided' }}
           </div>
         </div>
         <div class="d-flex align-center text-high-emphasis pa-2">
           <VIcon
             class="me-2"
-            icon="tabler-clock"
+            icon="tabler-world"
+            size="22"
+          />
+          <div class="text-base text-truncate">
+            {{ visitorMeta?.sourceUrl || contactMeta?.sourceUrl || 'Not provided' }}
+          </div>
+        </div>
+        <div class="d-flex align-center text-high-emphasis pa-2">
+          <VIcon
+            class="me-2"
+            icon="tabler-link"
+            size="22"
+          />
+          <div class="text-base text-truncate">
+            {{ visitorMeta?.referrer || contactMeta?.referrer || 'Not provided' }}
+          </div>
+        </div>
+        <div class="d-flex align-center text-high-emphasis pa-2">
+          <VIcon
+            class="me-2"
+            icon="tabler-map-pin"
             size="22"
           />
           <div class="text-base">
-            Mon - Fri 10AM - 8PM
+            {{ visitorMeta?.timezone || contactMeta?.timezone || 'Not provided' }}
+          </div>
+        </div>
+        <div class="d-flex align-center text-high-emphasis pa-2">
+          <VIcon
+            class="me-2"
+            icon="tabler-language"
+            size="22"
+          />
+          <div class="text-base">
+            {{ visitorMeta?.language || contactMeta?.language || 'Not provided' }}
+          </div>
+        </div>
+        <div class="d-flex align-center text-high-emphasis pa-2">
+          <VIcon
+            class="me-2"
+            icon="tabler-device-desktop"
+            size="22"
+          />
+          <div class="text-base">
+            {{ [visitorMeta?.browser, visitorMeta?.os, visitorMeta?.device, contactMeta?.browser, contactMeta?.os, contactMeta?.device]
+              .filter(Boolean)
+              .filter((value, index, list) => list.indexOf(value) === index)
+              .join(' • ') || 'Not provided' }}
+          </div>
+        </div>
+        <div class="d-flex align-center text-high-emphasis pa-2">
+          <VIcon
+            class="me-2"
+            icon="tabler-graph"
+            size="22"
+          />
+          <div class="text-base">
+            {{ [visitorMeta?.utmSource, visitorMeta?.utmMedium, visitorMeta?.utmCampaign, contactMeta?.utmSource, contactMeta?.utmMedium, contactMeta?.utmCampaign]
+              .filter(Boolean)
+              .filter((value, index, list) => list.indexOf(value) === index)
+              .join(' / ') || 'Not provided' }}
+          </div>
+        </div>
+        <div class="d-flex align-center text-high-emphasis pa-2">
+          <VIcon
+            class="me-2"
+            icon="tabler-route"
+            size="22"
+          />
+          <div class="text-base">
+            {{ visitorMeta?.lastPage || contactMeta?.lastPage || 'Not provided' }}
           </div>
         </div>
       </div>
@@ -147,7 +237,13 @@ const { resolveAvatarBadgeVariant } = useChat()
             Shared Media
           </div>
         </div>
-        <div class="d-flex align-center text-high-emphasis pa-2">
+        <div
+          class="d-flex align-center text-high-emphasis pa-2 cursor-pointer"
+          role="button"
+          tabindex="0"
+          @click="openDeleteDialog"
+          @keydown.enter.prevent="openDeleteDialog"
+        >
           <VIcon
             class="me-2"
             icon="tabler-trash"
@@ -173,10 +269,40 @@ const { resolveAvatarBadgeVariant } = useChat()
           color="error"
           append-icon="tabler-trash"
           class="mt-6"
+          @click="openDeleteDialog"
         >
           Delete Contact
         </VBtn>
       </div>
     </PerfectScrollbar>
+
+    <VDialog
+      v-model="isDeleteDialogOpen"
+      width="420"
+    >
+      <VCard>
+        <VCardTitle class="text-h6">
+          Delete conversation?
+        </VCardTitle>
+        <VCardText>
+          This will remove the conversation from the admin list.
+        </VCardText>
+        <VCardActions>
+          <VSpacer />
+          <VBtn
+            variant="tonal"
+            @click="isDeleteDialogOpen = false"
+          >
+            Cancel
+          </VBtn>
+          <VBtn
+            color="error"
+            @click="confirmDelete"
+          >
+            Delete
+          </VBtn>
+        </VCardActions>
+      </VCard>
+    </VDialog>
   </template>
 </template>

@@ -8,6 +8,10 @@ export interface AIChatMessage {
   text: string
   sender: ChatSender
   timestamp: string
+  attachmentUrl?: string
+  attachmentType?: string
+  attachmentName?: string
+  attachmentSize?: number
 }
 
 const CHAT_API_BASE = '/chat'
@@ -52,14 +56,26 @@ export const useAIChatStore = defineStore('aiChat', () => {
 
     const id = item.id ?? item.messageId ?? item.message_id
     const content = item.content ?? item.message ?? item.text
-    if (!content)
+    const attachmentUrl = item.attachmentUrl ?? item.attachment_url
+    const attachmentType = item.attachmentType ?? item.attachment_type
+    const attachmentName = item.attachmentName ?? item.attachment_name
+    const rawAttachmentSize = item.attachmentSize ?? item.attachment_size
+    const attachmentSize = rawAttachmentSize === undefined || rawAttachmentSize === null
+      ? undefined
+      : Number(rawAttachmentSize)
+
+    if (!content && !attachmentUrl)
       return null
 
     return {
       id: id ?? `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-      text: String(content),
+      text: content ? String(content) : '',
       sender: normalizeSender(item.senderType ?? item.sender_type ?? item.sender),
       timestamp: item.createdAt ?? item.created_at ?? new Date().toISOString(),
+      attachmentUrl: attachmentUrl || undefined,
+      attachmentType: attachmentType || undefined,
+      attachmentName: attachmentName || undefined,
+      attachmentSize: Number.isNaN(attachmentSize) ? undefined : attachmentSize,
     }
   }
 
@@ -69,8 +85,16 @@ export const useAIChatStore = defineStore('aiChat', () => {
       return false
     if (last.sender !== message.sender)
       return false
-    if (last.text !== message.text)
+
+    if (last.attachmentUrl || message.attachmentUrl) {
+      if (!last.attachmentUrl || !message.attachmentUrl)
+        return false
+      if (last.attachmentUrl !== message.attachmentUrl)
+        return false
+    }
+    else if (last.text !== message.text) {
       return false
+    }
 
     const lastTime = new Date(last.timestamp).getTime()
     const nextTime = new Date(message.timestamp).getTime()
@@ -455,7 +479,49 @@ export const useAIChatStore = defineStore('aiChat', () => {
   }
 
   const uploadFile = async (_file: File) => {
-    console.warn('File upload not implemented for realtime chat yet')
+    if (requiresProfile.value || isSending.value)
+      return
+
+    if (!conversationId.value) {
+      await ensureConversation()
+      if (!conversationId.value)
+        return
+    }
+
+    isSending.value = true
+
+    const formData = new FormData()
+    formData.append('file', _file)
+    formData.append('senderType', 'visitor')
+    if (visitorId.value)
+      formData.append('senderId', visitorId.value)
+    formData.append('content', '')
+
+    try {
+      const response = await $api(`${CHAT_API_BASE}/conversations/${conversationId.value}/messages/image`, {
+        method: 'POST',
+        body: formData,
+      })
+
+      const data = response?.data ?? response
+      const message = mapMessage(data)
+      if (message)
+        appendMessage(message)
+
+      // Do not re-broadcast after upload; backend already creates the message.
+    }
+    catch (error) {
+      const status = getErrorStatus(error)
+      if (status === 404 || status === 410) {
+        handleConversationMissing()
+        return
+      }
+
+      console.error('Chat image upload error', error)
+    }
+    finally {
+      isSending.value = false
+    }
   }
 
   const uploadVisitorAvatar = async (file: File) => {

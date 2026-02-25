@@ -17,7 +17,39 @@
       </span>
     </div>
     <div class="ai-message-bubble">
-      <p v-html="formattedContent" />
+      <div
+        v-if="isImage"
+        class="ai-attachment-image"
+      >
+        <img
+          :src="message.attachmentUrl"
+          :alt="message.attachmentName || 'Image attachment'"
+        >
+      </div>
+      <div
+        v-else-if="hasAttachment"
+        class="ai-attachment-file"
+      >
+        <span class="ai-attachment-icon">
+          <svg viewBox="0 0 24 24">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+            <path d="M14 2v6h6" />
+          </svg>
+        </span>
+        <div class="ai-attachment-meta">
+          <span class="ai-attachment-name">{{ message.attachmentName || 'Attachment' }}</span>
+          <span
+            v-if="formattedSize"
+            class="ai-attachment-size"
+          >
+            {{ formattedSize }}
+          </span>
+        </div>
+      </div>
+      <p
+        v-if="formattedContent"
+        v-html="formattedContent"
+      />
       <span class="ai-message-time">{{ formattedTime }}</span>
     </div>
   </div>
@@ -31,6 +63,10 @@ interface ChatMessagePayload {
   text: string
   sender: 'visitor' | 'ai' | 'admin'
   timestamp: string
+  attachmentUrl?: string
+  attachmentType?: string
+  attachmentName?: string
+  attachmentSize?: number
 }
 
 const props = defineProps({
@@ -45,11 +81,33 @@ const props = defineProps({
 })
 
 const formattedContent = computed(() => {
+  if (!props.message.text)
+    return ''
+
   return props.message.text
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>')
+})
+
+const hasAttachment = computed(() => Boolean(props.message.attachmentUrl))
+const isImage = computed(() => Boolean(props.message.attachmentUrl && props.message.attachmentType?.startsWith('image/')))
+
+const formattedSize = computed(() => {
+  const size = props.message.attachmentSize
+  if (!size || Number.isNaN(size))
+    return ''
+
+  if (size < 1024)
+    return `${size} B`
+
+  const kb = size / 1024
+  if (kb < 1024)
+    return `${kb.toFixed(1)} KB`
+
+  const mb = kb / 1024
+  return `${mb.toFixed(1)} MB`
 })
 
 const formattedTime = computed(() => {
@@ -110,6 +168,78 @@ const formattedTime = computed(() => {
   font-size: 15px;
   line-height: 1.5;
   word-break: break-word;
+}
+
+.ai-attachment-image {
+  width: fit-content;
+  border-radius: 14px;
+  overflow: hidden;
+  margin-bottom: 8px;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+}
+
+.ai-attachment-image img {
+  display: block;
+  max-width: min(320px, 70vw);
+  height: auto;
+}
+
+.ai-message-bubble:has(.ai-attachment-image):not(:has(p)) {
+  padding: 8px 10px;
+  width: fit-content;
+  max-width: 100%;
+}
+
+.ai-attachment-file {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(15, 118, 110, 0.12);
+  margin-bottom: 8px;
+}
+
+.ai-message-user .ai-attachment-file {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.ai-attachment-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: rgba(15, 118, 110, 0.18);
+  display: grid;
+  place-items: center;
+  color: #0f766e;
+}
+
+.ai-message-user .ai-attachment-icon {
+  background: rgba(255, 255, 255, 0.25);
+  color: white;
+}
+
+.ai-attachment-icon svg {
+  width: 18px;
+  height: 18px;
+  stroke: currentColor;
+  stroke-width: 1.8px;
+  fill: none;
+}
+
+.ai-attachment-meta {
+  display: grid;
+  gap: 2px;
+}
+
+.ai-attachment-name {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.ai-attachment-size {
+  font-size: 11px;
+  opacity: 0.7;
 }
 
 .ai-message-time {

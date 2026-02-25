@@ -24,6 +24,21 @@ const resolveFeedbackIcon = (feedback: ChatOut['messages'][number]['feedback']) 
     return { icon: 'tabler-check', color: undefined }
 }
 
+const formatAttachmentSize = (size?: number) => {
+  if (!size || Number.isNaN(size))
+    return ''
+
+  if (size < 1024)
+    return `${size} B`
+
+  const kb = size / 1024
+  if (kb < 1024)
+    return `${kb.toFixed(1)} KB`
+
+  const mb = kb / 1024
+  return `${mb.toFixed(1)} MB`
+}
+
 const msgGroups = computed(() => {
   let messages: ChatOut['messages'] = []
 
@@ -45,6 +60,10 @@ const msgGroups = computed(() => {
           message: msg.message,
           time: msg.time,
           feedback: msg.feedback,
+          attachmentUrl: msg.attachmentUrl,
+          attachmentType: msg.attachmentType,
+          attachmentName: msg.attachmentName,
+          attachmentSize: msg.attachmentSize,
         })
       }
       else {
@@ -57,6 +76,10 @@ const msgGroups = computed(() => {
               message: msg.message,
               time: msg.time,
               feedback: msg.feedback,
+              attachmentUrl: msg.attachmentUrl,
+              attachmentType: msg.attachmentType,
+              attachmentName: msg.attachmentName,
+              attachmentSize: msg.attachmentSize,
             },
           ],
         }
@@ -102,9 +125,40 @@ const msgGroups = computed(() => {
           :class="[
             msgGrp.senderId === contact.id ? 'chat-left' : 'bg-primary text-white chat-right',
             msgGrp.messages.length - 1 !== msgIndex ? 'mb-2' : 'mb-1',
+            msgData.attachmentUrl && !msgData.message ? 'chat-content-attachment-only' : '',
           ]"
         >
-          <p class="mb-0 text-base">
+          <div
+            v-if="msgData.attachmentUrl && msgData.attachmentType?.startsWith('image/')"
+            class="chat-attachment-image"
+          >
+            <img
+              :src="msgData.attachmentUrl"
+              :alt="msgData.attachmentName || 'Image attachment'"
+            >
+          </div>
+          <div
+            v-else-if="msgData.attachmentUrl"
+            class="chat-attachment-file"
+          >
+            <VIcon
+              icon="tabler-file"
+              size="18"
+            />
+            <div class="chat-attachment-meta">
+              <span class="chat-attachment-name">{{ msgData.attachmentName || 'Attachment' }}</span>
+              <span
+                v-if="formatAttachmentSize(msgData.attachmentSize)"
+                class="chat-attachment-size"
+              >
+                {{ formatAttachmentSize(msgData.attachmentSize) }}
+              </span>
+            </div>
+          </div>
+          <p
+            v-if="msgData.message"
+            class="mb-0 text-base"
+          >
             {{ msgData.message }}
           </p>
         </div>
@@ -145,5 +199,51 @@ const msgGroups = computed(() => {
       }
     }
   }
+}
+
+.chat-attachment-image {
+  width: fit-content;
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 0.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.chat-attachment-image img {
+  display: block;
+  max-width: min(320px, 70vw);
+  height: auto;
+}
+
+.chat-content-attachment-only {
+  padding: 0.4rem !important;
+  width: fit-content;
+  max-width: 100%;
+}
+
+.chat-attachment-file {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.6rem;
+  border-radius: 8px;
+  background: rgba(var(--v-theme-primary), 0.08);
+  margin-bottom: 0.5rem;
+}
+
+.chat-attachment-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.chat-attachment-name {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.chat-attachment-size {
+  font-size: 0.75rem;
+  opacity: 0.7;
 }
 </style>

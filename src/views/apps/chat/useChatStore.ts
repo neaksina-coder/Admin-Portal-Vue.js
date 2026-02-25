@@ -12,6 +12,8 @@ interface State {
   _lastQuery: string
   _messagesPollTimer: ReturnType<typeof setInterval> | null
   _messagesPollId: number | null
+  _messageIds: Set<string | number>
+  _messageKeys: Set<string>
 }
 
 const CHAT_API_BASE = '/chat'
@@ -45,6 +47,8 @@ export const useChatStore = defineStore('chat', {
     _lastQuery: '',
     _messagesPollTimer: null,
     _messagesPollId: null,
+    _messageIds: new Set(),
+    _messageKeys: new Set(),
   }),
   actions: {
     clearActiveChat() {
@@ -60,6 +64,8 @@ export const useChatStore = defineStore('chat', {
       }
 
       this._messagesPollId = null
+      this._messageIds.clear()
+      this._messageKeys.clear()
       this.activeChat = null
     },
     ensureProfileUser() {
@@ -193,22 +199,63 @@ export const useChatStore = defineStore('chat', {
       return contact
     },
 
-    mapMessage(item: any, conversationId: number): ChatMessage | null {
+    mapMessage(item: any, conversationId: number): (ChatMessage & { id?: string | number }) | null {
       if (!item)
         return null
 
+      const id = item?.id ?? item?.messageId ?? item?.message_id
       const senderTypeRaw = item?.senderType ?? item?.sender_type ?? item?.sender
       const senderType = typeof senderTypeRaw === 'string' ? senderTypeRaw.toLowerCase() : ''
       const isVisitor = senderType === 'visitor' || senderType === 'user' || senderType === 'customer'
 
       const content = item?.content ?? item?.message ?? item?.text ?? item?.body ?? item?.msg
-      if (!content)
+      const attachmentBlock = item?.attachment ?? item?.file ?? item?.media ?? {}
+      const attachmentUrlRaw = item?.attachmentUrl
+        ?? item?.attachment_url
+        ?? attachmentBlock?.url
+        ?? attachmentBlock?.path
+        ?? attachmentBlock?.location
+        ?? attachmentBlock?.attachmentUrl
+        ?? attachmentBlock?.attachment_url
+      const attachmentType = item?.attachmentType
+        ?? item?.attachment_type
+        ?? attachmentBlock?.type
+        ?? attachmentBlock?.mime
+        ?? attachmentBlock?.mimeType
+        ?? attachmentBlock?.attachmentType
+        ?? attachmentBlock?.attachment_type
+      const attachmentName = item?.attachmentName
+        ?? item?.attachment_name
+        ?? attachmentBlock?.name
+        ?? attachmentBlock?.filename
+        ?? attachmentBlock?.originalName
+        ?? attachmentBlock?.original_name
+        ?? attachmentBlock?.attachmentName
+        ?? attachmentBlock?.attachment_name
+      const rawAttachmentSize = item?.attachmentSize
+        ?? item?.attachment_size
+        ?? attachmentBlock?.size
+        ?? attachmentBlock?.bytes
+        ?? attachmentBlock?.attachmentSize
+        ?? attachmentBlock?.attachment_size
+      const attachmentSize = rawAttachmentSize === undefined || rawAttachmentSize === null
+        ? undefined
+        : Number(rawAttachmentSize)
+
+      if (!content && !attachmentUrlRaw)
         return null
 
+      const attachmentUrl = attachmentUrlRaw ? resolveAssetUrl(String(attachmentUrlRaw)) : undefined
+
       return {
-        message: String(content),
+        id: id ?? undefined,
+        message: content ? String(content) : '',
         time: item?.createdAt ?? item?.created_at ?? new Date().toISOString(),
         senderId: isVisitor ? conversationId : (this.profileUser?.id ?? ADMIN_ID),
+        attachmentUrl,
+        attachmentType: attachmentType || undefined,
+        attachmentName: attachmentName || undefined,
+        attachmentSize: Number.isNaN(attachmentSize) ? undefined : attachmentSize,
         feedback: {
           isSent: true,
           isDelivered: true,
@@ -217,15 +264,41 @@ export const useChatStore = defineStore('chat', {
       }
     },
 
-    shouldSkipMessage(list: ChatMessage[] | undefined, message: ChatMessage) {
+    buildMessageKey(message: ChatMessage & { id?: string | number }) {
+      if (message.id !== undefined)
+        return `id:${message.id}`
+
+      const timeMs = new Date(message.time).getTime()
+      const bucket = Number.isNaN(timeMs) ? 'na' : Math.floor(timeMs / 60000)
+      const attachment = (message as any).attachmentUrl ?? ''
+      if (attachment)
+        return `img:${message.senderId}|${attachment}|${bucket}`
+
+      return `txt:${message.senderId}|${message.message}|${bucket}`
+    },
+
+    shouldSkipMessage(list: (ChatMessage & { id?: string | number })[] | undefined, message: ChatMessage & { id?: string | number }) {
+      if (message.id !== undefined && this._messageIds.has(message.id))
+        return true
+      if (this._messageKeys.has(this.buildMessageKey(message)))
+        return true
+
       if (!list || list.length === 0)
         return false
 
       const last = list[list.length - 1]
       if (last.senderId !== message.senderId)
         return false
-      if (last.message !== message.message)
+
+      if (last.attachmentUrl || message.attachmentUrl) {
+        if (!last.attachmentUrl || !message.attachmentUrl)
+          return false
+        if (last.attachmentUrl !== message.attachmentUrl)
+          return false
+      }
+      else if (last.message !== message.message) {
         return false
+      }
 
       const lastTime = new Date(last.time).getTime()
       const nextTime = new Date(message.time).getTime()
@@ -235,18 +308,21 @@ export const useChatStore = defineStore('chat', {
       return Math.abs(nextTime - lastTime) <= DUPLICATE_WINDOW_MS
     },
 
-    appendToActiveChat(message: ChatMessage) {
+    appendToActiveChat(message: ChatMessage & { id?: string | number }) {
       if (!this.activeChat?.chat)
         return
 
       if (this.shouldSkipMessage(this.activeChat.chat.messages, message))
         return
 
+      if (message.id !== undefined)
+        this._messageIds.add(message.id)
+      this._messageKeys.add(this.buildMessageKey(message))
       this.activeChat.chat.messages.push(message)
       this.activeChat.chat.lastMessage = message
     },
 
-    appendToContact(conversationId: number, message: ChatMessage, incrementUnseen = false) {
+    appendToContact(conversationId: number, message: ChatMessage & { id?: string | number }, incrementUnseen = false) {
       const contact = this.chatsContacts.find(c => c.id === conversationId)
       if (!contact)
         return
@@ -254,6 +330,9 @@ export const useChatStore = defineStore('chat', {
       if (this.shouldSkipMessage(contact.chat.messages, message))
         return
 
+      if (message.id !== undefined)
+        this._messageIds.add(message.id)
+      this._messageKeys.add(this.buildMessageKey(message))
       contact.chat.messages.push(message)
       contact.chat.lastMessage = message
       if (incrementUnseen)
@@ -341,10 +420,21 @@ export const useChatStore = defineStore('chat', {
         ?? payload?.results
         ?? []
 
+      this._messageIds.clear()
+      this._messageKeys.clear()
       const messages = Array.isArray(list)
         ? list
             .map((item: any) => this.mapMessage(item, conversationId))
-            .filter((item): item is ChatMessage => item !== null)
+            .filter((item): item is ChatMessage & { id?: string | number } => item !== null)
+            .filter((item) => {
+              const key = this.buildMessageKey(item)
+              if (this._messageKeys.has(key))
+                return false
+              this._messageKeys.add(key)
+              if (item.id !== undefined)
+                this._messageIds.add(item.id)
+              return true
+            })
         : []
 
       if (this.activeChat?.chat && this.activeChat.contact.id === conversationId) {
@@ -606,6 +696,37 @@ export const useChatStore = defineStore('chat', {
       }
       catch (error) {
         console.error(error)
+      }
+    },
+
+    async uploadImage(file: File, caption = '') {
+      if (!this.activeChat?.contact.id)
+        return
+
+      const conversationId = this.activeChat.contact.id
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('senderType', 'admin')
+      formData.append('senderId', String(this.profileUser?.id ?? ADMIN_ID))
+      formData.append('content', caption)
+
+      try {
+        const response = await $api(`${CHAT_API_BASE}/conversations/${conversationId}/messages/image`, {
+          method: 'POST',
+          body: formData,
+        })
+
+        const data = response?.data ?? response
+        const msg = this.mapMessage(data, Number(conversationId))
+        if (msg) {
+          this.appendToActiveChat(msg)
+          this.appendToContact(conversationId, msg)
+        }
+
+        // Do not re-broadcast after upload; backend already creates the message.
+      }
+      catch (error) {
+        console.error('Admin image upload failed', error)
       }
     },
   },

@@ -14,7 +14,7 @@
       <input
         ref="fileInput"
         type="file"
-        accept="image/*,.pdf,.doc,.docx"
+        accept="image/*"
         class="ai-hidden-input"
         @change="handleFileChange"
       >

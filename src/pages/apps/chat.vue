@@ -75,6 +75,21 @@ const sendMessage = async () => {
   })
 }
 
+const handleFileUpload = async (event: Event) => {
+  const target = event.target as HTMLInputElement | null
+  const file = target?.files?.[0]
+  if (!file)
+    return
+
+  await store.uploadImage(file)
+  if (target)
+    target.value = ''
+
+  nextTick(() => {
+    scrollToBottomInChatLog()
+  })
+}
+
 const openChatOfContact = async (userId: TypeChatContact['id']) => {
   await store.getChat(userId)
 
@@ -103,7 +118,7 @@ const isUserProfileSidebarOpen = ref(false)
 const isActiveChatUserProfileSidebarOpen = ref(false)
 
 // file input
-const refInputEl = ref<HTMLElement>()
+const refInputEl = ref<HTMLInputElement | null>(null)
 
 const { name } = useTheme()
 
@@ -307,8 +322,9 @@ const chatContentContainerBg = computed(() => {
             ref="refInputEl"
             type="file"
             name="file"
-            accept=".jpeg,.png,.jpg,GIF"
+            accept="image/*"
             hidden
+            @change="handleFileUpload"
           >
         </VForm>
       </div>

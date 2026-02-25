@@ -13,6 +13,10 @@ export interface ChatMessage {
   message: string
   time: string
   senderId: number
+  attachmentUrl?: string
+  attachmentType?: string
+  attachmentName?: string
+  attachmentSize?: number
   feedback: {
     isSent: boolean
     isDelivered: boolean

@@ -80,15 +80,95 @@ const props = defineProps({
   },
 })
 
+const escapeHtml = (value: string) => {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
+const toInlineHtml = (value: string) => {
+  return value
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>')
+}
+
+const renderList = (items: string[], ordered: boolean) => {
+  const tag = ordered ? 'ol' : 'ul'
+  return `<${tag}>${items.map(item => `<li>${item}</li>`).join('')}</${tag}>`
+}
+
+const renderMessageHtml = (raw: string) => {
+  if (!raw.trim())
+    return ''
+
+  const lines = raw.split(/\r?\n/)
+  let html = ''
+  let paragraph: string[] = []
+
+  const flushParagraph = () => {
+    if (!paragraph.length)
+      return
+    html += `<p>${paragraph.join('<br>')}</p>`
+    paragraph = []
+  }
+
+  let index = 0
+  while (index < lines.length) {
+    const line = lines[index]
+    const trimmed = line.trim()
+
+    if (!trimmed) {
+      flushParagraph()
+      index += 1
+      continue
+    }
+
+    const orderedMatch = trimmed.match(/^\d+[\.\)]\s+(.+)/)
+    const unorderedMatch = trimmed.match(/^[-*•]\s+(.+)/)
+
+    if (orderedMatch || unorderedMatch) {
+      flushParagraph()
+      const items: string[] = []
+      const ordered = Boolean(orderedMatch)
+
+      while (index < lines.length) {
+        const current = lines[index].trim()
+        if (!current)
+          break
+
+        const match = ordered
+          ? current.match(/^\d+[\.\)]\s+(.+)/)
+          : current.match(/^[-*•]\s+(.+)/)
+
+        if (!match)
+          break
+
+        const content = toInlineHtml(escapeHtml(match[1]))
+        items.push(content)
+        index += 1
+      }
+
+      html += renderList(items, ordered)
+      continue
+    }
+
+    paragraph.push(toInlineHtml(escapeHtml(trimmed)))
+    index += 1
+  }
+
+  flushParagraph()
+  return html
+}
+
 const formattedContent = computed(() => {
   if (!props.message.text)
     return ''
 
-  return props.message.text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>')
+  return renderMessageHtml(props.message.text)
 })
 
 const hasAttachment = computed(() => Boolean(props.message.attachmentUrl))
@@ -168,6 +248,29 @@ const formattedTime = computed(() => {
   font-size: 15px;
   line-height: 1.5;
   word-break: break-word;
+}
+
+.ai-message-bubble ul,
+.ai-message-bubble ol {
+  margin: 8px 0 0 18px;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.ai-message-bubble li {
+  margin: 0;
+  padding: 0;
+}
+
+.ai-message-bubble code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+  font-size: 0.92em;
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: rgba(15, 23, 42, 0.08);
 }
 
 .ai-attachment-image {

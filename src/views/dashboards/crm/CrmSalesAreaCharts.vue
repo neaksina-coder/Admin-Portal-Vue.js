@@ -1,16 +1,39 @@
 <script setup lang="ts">
 import { useTheme } from 'vuetify'
 
+interface Props {
+  title?: string
+  subtitle?: string
+  value?: string | number
+  change?: number
+  seriesData?: number[]
+}
+
+const props = defineProps<Props>()
+
 const vuetifyTheme = useTheme()
 
 const currentTheme = vuetifyTheme.current.value.colors
 
-const series = [
+const fallbackSeries = [200, 55, 400, 250]
+
+const series = computed(() => [
   {
-    name: 'Subscribers',
-    data: [200, 55, 400, 250],
+    name: 'Series',
+    data: props.seriesData?.length ? props.seriesData : fallbackSeries,
   },
-]
+])
+
+const displayValue = computed(() => (props.value ?? '175k'))
+const displayChange = computed(() => {
+  if (props.change === undefined || props.change === null)
+    return '-16.2%'
+
+  const sign = props.change >= 0 ? '+' : ''
+  return `${sign}${props.change.toFixed(1)}%`
+})
+
+const changeClass = computed(() => (props.change ?? 0) >= 0 ? 'text-success' : 'text-error')
 
 const chartOptions = {
   chart: {
@@ -78,10 +101,10 @@ const chartOptions = {
   <VCard>
     <VCardItem class="pb-3">
       <VCardTitle>
-        Sales
+        {{ props.title ?? 'Sales' }}
       </VCardTitle>
       <VCardSubtitle>
-        Last Year
+        {{ props.subtitle ?? 'Last Year' }}
       </VCardSubtitle>
     </VCardItem>
 
@@ -94,10 +117,10 @@ const chartOptions = {
     <VCardText class="pt-1">
       <div class="d-flex align-center justify-space-between gap-x-2">
         <h4 class="text-h4 text-center">
-          175k
+          {{ displayValue }}
         </h4>
-        <span class="text-sm text-error">
-          -16.2%
+        <span class="text-sm" :class="changeClass">
+          {{ displayChange }}
         </span>
       </div>
     </VCardText>

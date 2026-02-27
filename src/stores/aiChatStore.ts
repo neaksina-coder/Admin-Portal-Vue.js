@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 
 export type ChatSender = 'visitor' | 'ai' | 'admin'
+export type ChatMode = 'AI' | 'ADMIN'
 
 export interface AIChatMessage {
   id: number | string
@@ -28,6 +29,7 @@ export const useAIChatStore = defineStore('aiChat', () => {
   const isOnline = ref(true)
   const unreadCount = ref(0)
   const conversationId = ref('')
+  const mode = ref<ChatMode>('AI')
   const requiresProfile = ref(false)
   const visitorName = ref('')
   const visitorEmail = ref('')
@@ -116,6 +118,11 @@ export const useAIChatStore = defineStore('aiChat', () => {
 
     if (message.sender !== 'visitor')
       unreadCount.value += 1
+
+    if (message.sender === 'admin')
+      mode.value = 'ADMIN'
+    else if (message.sender === 'ai')
+      mode.value = 'AI'
   }
 
   const getStoredConversationId = () => {
@@ -258,6 +265,7 @@ export const useAIChatStore = defineStore('aiChat', () => {
     messageIds.clear()
     unreadCount.value = 0
     conversationId.value = ''
+    mode.value = 'AI'
     clearStoredConversationId()
     visitorId.value = ''
     clearStoredVisitorId()
@@ -607,6 +615,7 @@ export const useAIChatStore = defineStore('aiChat', () => {
     isOnline: computed(() => isOnline.value),
     unreadCount: computed(() => unreadCount.value),
     conversationId: computed(() => conversationId.value),
+    mode: computed(() => mode.value),
     requiresProfile: computed(() => requiresProfile.value),
     visitorName: computed(() => visitorName.value),
     visitorEmail: computed(() => visitorEmail.value),

@@ -1,10 +1,35 @@
 <script setup lang="ts">
-const series = [
+interface Props {
+  title?: string
+  subtitle?: string
+  value?: string | number
+  change?: number
+  seriesData?: number[]
+  categories?: string[]
+}
+
+const props = defineProps<Props>()
+
+const fallbackSeries = [60, 50, 20, 45, 50, 30, 70]
+const fallbackCategories = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
+
+const series = computed(() => [
   {
-    name: '2020',
-    data: [60, 50, 20, 45, 50, 30, 70],
+    name: 'Series',
+    data: props.seriesData?.length ? props.seriesData : fallbackSeries,
   },
-]
+])
+
+const displayValue = computed(() => (props.value ?? '124k'))
+const displayChange = computed(() => {
+  if (props.change === undefined || props.change === null)
+    return '+12.6%'
+
+  const sign = props.change >= 0 ? '+' : ''
+  return `${sign}${props.change.toFixed(1)}%`
+})
+
+const changeClass = computed(() => (props.change ?? 0) >= 0 ? 'text-success' : 'text-error')
 
 const chartOptions = computed(() => {
   return {
@@ -64,7 +89,7 @@ const chartOptions = computed(() => {
       show: false,
     },
     xaxis: {
-      categories: ['M', 'T', 'W', 'T', 'F', 'S', 'S'],
+      categories: props.categories?.length ? props.categories : fallbackCategories,
       axisBorder: {
         show: false,
       },
@@ -199,8 +224,8 @@ const chartOptions = computed(() => {
 <template>
   <VCard>
     <VCardItem class="pb-3">
-      <VCardTitle>Orders</VCardTitle>
-      <VCardSubtitle>Last Week</VCardSubtitle>
+      <VCardTitle>{{ props.title ?? 'Orders' }}</VCardTitle>
+      <VCardSubtitle>{{ props.subtitle ?? 'Last Week' }}</VCardSubtitle>
     </VCardItem>
 
     <VCardText>
@@ -212,10 +237,10 @@ const chartOptions = computed(() => {
 
       <div class="d-flex align-center justify-space-between gap-x-2 mt-3">
         <h4 class="text-h4 text-center">
-          124k
+          {{ displayValue }}
         </h4>
-        <div class="text-sm text-success">
-          +12.6%
+        <div class="text-sm" :class="changeClass">
+          {{ displayChange }}
         </div>
       </div>
     </VCardText>

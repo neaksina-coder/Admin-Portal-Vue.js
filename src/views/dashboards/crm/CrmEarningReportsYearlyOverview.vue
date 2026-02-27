@@ -2,6 +2,17 @@
 import { useTheme } from 'vuetify'
 import { hexToRgb } from '@layouts/utils'
 
+interface SegmentItem {
+  segment: string
+  count: number
+}
+
+interface Props {
+  segments?: SegmentItem[]
+}
+
+const props = defineProps<Props>()
+
 const vuetifyTheme = useTheme()
 
 const currentTab = ref<number>(0)
@@ -15,6 +26,128 @@ const chartConfigs = computed(() => {
   const legendColor = `rgba(${hexToRgb(currentTheme['on-background'])},${variableTheme['high-emphasis-opacity']})`
   const borderColor = `rgba(${hexToRgb(String(variableTheme['border-color']))},${variableTheme['border-opacity']})`
   const labelColor = `rgba(${hexToRgb(currentTheme['on-surface'])},${variableTheme['disabled-opacity']})`
+
+  if (props.segments?.length) {
+    const categories = props.segments.map(item => item.segment)
+    const values = props.segments.map(item => item.count)
+    const maxValue = Math.max(...values, 0)
+
+    return [
+      {
+        title: 'Segments',
+        icon: 'tabler-chart-bar',
+        chartOptions: {
+          chart: {
+            parentHeightOffset: 0,
+            type: 'bar',
+            toolbar: {
+              show: false,
+            },
+          },
+          plotOptions: {
+            bar: {
+              columnWidth: '40%',
+              borderRadiusApplication: 'end',
+              borderRadius: 4,
+              distributed: true,
+              dataLabels: {
+                position: 'top',
+              },
+            },
+          },
+          grid: {
+            show: false,
+            padding: {
+              top: 0,
+              bottom: 0,
+              left: -10,
+              right: -10,
+            },
+          },
+          colors: categories.map((_, index) => index === 0
+            ? `rgba(${hexToRgb(currentTheme.primary)}, 1)`
+            : labelPrimaryColor),
+          dataLabels: {
+            enabled: true,
+            formatter(val: number) {
+              return `${val}`
+            },
+            offsetY: -25,
+            style: {
+              fontSize: '13px',
+              colors: [legendColor],
+              fontWeight: '600',
+              fontFamily: 'Public Sans',
+            },
+          },
+          legend: {
+            show: false,
+          },
+          tooltip: {
+            enabled: true,
+          },
+          xaxis: {
+            categories,
+            axisBorder: {
+              show: true,
+              color: borderColor,
+            },
+            axisTicks: {
+              show: false,
+            },
+            labels: {
+              style: {
+                colors: labelColor,
+                fontSize: '12px',
+                fontFamily: 'Public Sans',
+              },
+            },
+          },
+          yaxis: {
+            labels: {
+              offsetX: -15,
+              style: {
+                fontSize: '12px',
+                colors: labelColor,
+                fontFamily: 'Public Sans',
+              },
+            },
+            min: 0,
+            max: maxValue ? Math.ceil(maxValue * 1.2) : 10,
+            tickAmount: 5,
+          },
+          responsive: [
+            {
+              breakpoint: 590,
+              options: {
+                plotOptions: {
+                  bar: {
+                    columnWidth: '60%',
+                  },
+                },
+                yaxis: {
+                  labels: {
+                    show: false,
+                  },
+                },
+                dataLabels: {
+                  style: {
+                    fontSize: '11px',
+                    fontWeight: '400',
+                  },
+                },
+              },
+            },
+          ],
+        },
+        series: [
+          {
+            data: values,
+          },
+        ],
+      },
+    ]
+  }
 
   return [
     {

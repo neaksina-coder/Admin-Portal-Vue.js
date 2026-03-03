@@ -1,9 +1,71 @@
 <script setup lang="ts">
 import ConnectImg from '@images/front-pages/landing-page/contact-customer-service.png'
 
+const BUSINESS_ID = Number(import.meta.env.VITE_BUSINESS_ID ?? 1)
+
 const name = ref('')
 const email = ref('')
+const phone = ref('')
+const company = ref('')
+const serviceInterest = ref('')
+const subject = ref('')
 const message = ref('')
+
+const isSubmitting = ref(false)
+const snackbar = ref(false)
+const snackbarText = ref('')
+const snackbarColor = ref('success')
+
+const showSnackbar = (text: string, color: string = 'success') => {
+  snackbarText.value = text
+  snackbarColor.value = color
+  snackbar.value = true
+}
+
+const submitInquiry = async () => {
+  if (!name.value.trim() || !email.value.trim() || !message.value.trim()) {
+    showSnackbar('Please provide your name, email, and message.', 'error')
+    return
+  }
+
+  const payload: Record<string, any> = {
+    businessId: BUSINESS_ID,
+    name: name.value.trim(),
+    email: email.value.trim(),
+    message: message.value.trim(),
+  }
+
+  if (phone.value.trim())
+    payload.phone = phone.value.trim()
+  if (company.value.trim())
+    payload.company = company.value.trim()
+  if (serviceInterest.value.trim())
+    payload.serviceInterest = serviceInterest.value.trim()
+  if (subject.value.trim())
+    payload.subject = subject.value.trim()
+
+  try {
+    isSubmitting.value = true
+    await $api('/public/contact-inquiries', {
+      method: 'POST',
+      body: payload,
+    })
+    showSnackbar('Thanks! Your inquiry was sent.')
+    name.value = ''
+    email.value = ''
+    phone.value = ''
+    company.value = ''
+    serviceInterest.value = ''
+    subject.value = ''
+    message.value = ''
+  }
+  catch (error) {
+    showSnackbar('Failed to send inquiry. Please try again later.', 'error')
+  }
+  finally {
+    isSubmitting.value = false
+  }
+}
 </script>
 
 <template>
@@ -103,7 +165,7 @@ const message = ref('')
                 <p class="mb-6">
                   If you would like to discuss anything related to payment, account, licensing, partnerships, or have pre-sales questions, you’re at the right place.
                 </p>
-                <VForm @submit.prevent="() => {}">
+                <VForm @submit.prevent="submitInquiry">
                   <VRow>
                     <VCol
                       cols="12"
@@ -127,6 +189,50 @@ const message = ref('')
                       />
                     </VCol>
 
+                    <VCol
+                      cols="12"
+                      md="6"
+                    >
+                      <AppTextField
+                        v-model="phone"
+                        placeholder="+123456789"
+                        label="Phone"
+                      />
+                    </VCol>
+
+                    <VCol
+                      cols="12"
+                      md="6"
+                    >
+                      <AppTextField
+                        v-model="company"
+                        placeholder="Company name"
+                        label="Company"
+                      />
+                    </VCol>
+
+                    <VCol
+                      cols="12"
+                      md="6"
+                    >
+                      <AppTextField
+                        v-model="serviceInterest"
+                        placeholder="Website + SEO"
+                        label="Service interest"
+                      />
+                    </VCol>
+
+                    <VCol
+                      cols="12"
+                      md="6"
+                    >
+                      <AppTextField
+                        v-model="subject"
+                        placeholder="Need a quote"
+                        label="Subject"
+                      />
+                    </VCol>
+
                     <VCol cols="12">
                       <AppTextarea
                         v-model="message"
@@ -137,7 +243,7 @@ const message = ref('')
                     </VCol>
 
                     <VCol>
-                      <VBtn type="submit">
+                      <VBtn type="submit" :loading="isSubmitting">
                         Send Inquiry
                       </VBtn>
                     </VCol>
@@ -149,6 +255,15 @@ const message = ref('')
         </VRow>
       </div>
     </div>
+
+    <VSnackbar
+      v-model="snackbar"
+      :color="snackbarColor"
+      :timeout="3000"
+      location="top"
+    >
+      {{ snackbarText }}
+    </VSnackbar>
   </VContainer>
 </template>
 

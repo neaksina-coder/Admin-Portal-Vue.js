@@ -29,6 +29,7 @@ const isDeleteDialogVisible = ref(false)
 const pendingDeleteUserId = ref<number | null>(null)
 const userData = useCookie<any>('userData')
 const isSuperuser = computed(() => userData.value?.role === 'superuser')
+const BUSINESS_ID = Number(import.meta.env.VITE_BUSINESS_ID ?? 0) || null
 
 watch(isSuperuser, value => {
   if (!value)
@@ -221,12 +222,50 @@ const onDeleteConfirm = async (confirmed: boolean) => {
   showSnackbar('User deleted successfully.')
 }
 
-const widgetData = ref([
-  { title: 'Session', value: '21,459', change: 29, desc: 'Total Users', icon: 'tabler-users', iconColor: 'primary' },
-  { title: 'Paid Users', value: '4,567', change: 18, desc: 'Last Week Analytics', icon: 'tabler-user-plus', iconColor: 'error' },
-  { title: 'Active Users', value: '19,860', change: -14, desc: 'Last Week Analytics', icon: 'tabler-user-check', iconColor: 'success' },
-  { title: 'Pending Users', value: '237', change: 42, desc: 'Last Week Analytics', icon: 'tabler-user-search', iconColor: 'warning' },
-])
+const overviewRange = ref<'7d' | '30d' | '90d' | '365d'>('7d')
+const overviewBusinessId = ref<number | null>(BUSINESS_ID)
+
+const { data: overviewData, execute: fetchOverview } = await useApi<any>(createUrl('/dashboard/users-overview', {
+  query: {
+    businessId: computed(() => overviewBusinessId.value || undefined),
+    range: overviewRange,
+  },
+}))
+
+watch([overviewRange, overviewBusinessId], () => {
+  fetchOverview()
+}, { immediate: true })
+
+const overview = computed(() => {
+  const payload = overviewData.value
+  const data = payload?.data ?? payload ?? {}
+
+  return {
+    totalUsers: Number(data.totalUsers ?? 0),
+    totalUsersGrowthPct: Number(data.totalUsersGrowthPct ?? 0),
+    paidUsers: Number(data.paidUsers ?? 0),
+    paidUsersGrowthPct: Number(data.paidUsersGrowthPct ?? 0),
+    activeUsers: Number(data.activeUsers ?? 0),
+    activeUsersGrowthPct: Number(data.activeUsersGrowthPct ?? 0),
+    pendingUsers: Number(data.pendingUsers ?? 0),
+    pendingUsersGrowthPct: Number(data.pendingUsersGrowthPct ?? 0),
+    rangeDays: Number(data.rangeDays ?? 7),
+  }
+})
+
+const formatCount = (value: number) => new Intl.NumberFormat('en-US').format(value)
+
+const widgetData = computed(() => {
+  const data = overview.value
+  const rangeLabel = data.rangeDays === 7 ? 'Last Week Analytics' : `Last ${data.rangeDays} Days`
+
+  return [
+    { title: 'Session', value: formatCount(data.totalUsers), change: data.totalUsersGrowthPct, desc: 'Total Users', icon: 'tabler-users', iconColor: 'primary' },
+    { title: 'Paid Users', value: formatCount(data.paidUsers), change: data.paidUsersGrowthPct, desc: rangeLabel, icon: 'tabler-user-plus', iconColor: 'error' },
+    { title: 'Active Users', value: formatCount(data.activeUsers), change: data.activeUsersGrowthPct, desc: rangeLabel, icon: 'tabler-user-check', iconColor: 'success' },
+    { title: 'Pending Users', value: formatCount(data.pendingUsers), change: data.pendingUsersGrowthPct, desc: rangeLabel, icon: 'tabler-user-search', iconColor: 'warning' },
+  ]
+})
 </script>
 
 <template>

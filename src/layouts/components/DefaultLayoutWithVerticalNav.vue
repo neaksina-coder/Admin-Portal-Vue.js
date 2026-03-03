@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import navItems from '@/navigation/vertical'
+import hrNavItems from '@/navigation/vertical/hr'
 import { themeConfig } from '@themeConfig'
 
 // Components
@@ -10,10 +11,15 @@ import UserProfile from '@/layouts/components/UserProfile.vue'
 
 // @layouts plugin
 import { VerticalNavLayout } from '@layouts'
+
+const userData = useCookie<any>('userData')
+const role = computed(() => String(userData.value?.role || '').toLowerCase())
+const hrRoles = ['customer_owner', 'hr_admin', 'employee']
+const activeNavItems = computed(() => (hrRoles.includes(role.value) ? hrNavItems : navItems))
 </script>
 
 <template>
-  <VerticalNavLayout :nav-items="navItems">
+  <VerticalNavLayout :nav-items="activeNavItems">
     <!-- 👉 navbar -->
     <template #navbar="{ toggleVerticalOverlayNavActive }">
       <div class="d-flex h-100 align-center">

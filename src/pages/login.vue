@@ -88,6 +88,19 @@ const login = async () => {
       superuser: [
         { action: 'manage', subject: 'all' },
       ],
+      customer_owner: [
+        { action: 'read', subject: 'Apps' },
+        { action: 'read', subject: 'Products' },
+        { action: 'read', subject: 'Categories' },
+      ],
+      hr_admin: [
+        { action: 'read', subject: 'Apps' },
+        { action: 'read', subject: 'Products' },
+        { action: 'read', subject: 'Categories' },
+      ],
+      employee: [
+        { action: 'read', subject: 'Apps' },
+      ],
     }
     const userAbilityRules = res.userAbilityRules ?? roleAbilityMap[role] ?? []
 
@@ -103,7 +116,12 @@ const login = async () => {
     // Redirect to `to` query if exist or redirect to index route
     // ❗ nextTick is required to wait for DOM updates and later redirect
     await nextTick(() => {
-      const defaultRoute = role === 'user' ? { name: 'front-pages-landing-page' } : { name: 'dashboards-crm' }
+      const hrRoles = ['customer_owner', 'hr_admin', 'employee']
+      const defaultRoute = role === 'user'
+        ? { name: 'front-pages-landing-page' }
+        : hrRoles.includes(role)
+          ? { name: 'hr-dashboard' }
+          : { name: 'dashboards-crm' }
       router.replace(route.query.to ? String(route.query.to) : defaultRoute)
     })
   }

@@ -35,6 +35,9 @@ const snackbar = ref(false)
 const snackbarText = ref('')
 const snackbarColor = ref<'success' | 'error'>('success')
 
+const suspendedDetail = 'Business account is suspended'
+const suspendedMessage = 'Your business is suspended. Please contact support.'
+
 const cloneAccount = (data: AccountForm): AccountForm => ({
   avatarImg: data.avatarImg,
   firstName: data.firstName,
@@ -52,6 +55,15 @@ const showSnackbar = (text: string, color: 'success' | 'error' = 'success') => {
   snackbarText.value = text
   snackbarColor.value = color
   snackbar.value = true
+}
+
+const getSuspendedErrorMessage = (error: unknown) => {
+  const detail = (error as any)?.data?.detail ?? (error as any)?.response?._data?.detail
+
+  if (detail === suspendedDetail)
+    return suspendedMessage
+
+  return undefined
 }
 
 const splitFullName = (fullName: string) => {
@@ -105,7 +117,8 @@ const fetchAccount = async () => {
     applyAccountData(data)
   }
   catch (error) {
-    showSnackbar('Failed to load account data.', 'error')
+    const suspendedErrorMessage = getSuspendedErrorMessage(error)
+    showSnackbar(suspendedErrorMessage || 'Failed to load account data.', 'error')
   }
   finally {
     isLoading.value = false
@@ -183,7 +196,8 @@ const saveAccount = async () => {
     showSnackbar('Account updated successfully.')
   }
   catch (error) {
-    showSnackbar('Failed to update account.', 'error')
+    const suspendedErrorMessage = getSuspendedErrorMessage(error)
+    showSnackbar(suspendedErrorMessage || 'Failed to update account.', 'error')
   }
   finally {
     isSaving.value = false

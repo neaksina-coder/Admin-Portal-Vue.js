@@ -119,6 +119,30 @@ const employees = computed<HrEmployee[]>(() => {
     .filter(item => item.id)
 })
 
+// Payslip filters
+const payslipSearch = ref('')
+const payslipStatus = ref<string | null>(null)
+const payslipPeriod = ref<number | null>(null)
+
+const filteredPayslips = computed(() => {
+  const query = payslipSearch.value.trim().toLowerCase()
+  const status = String(payslipStatus.value || '').toLowerCase()
+  const periodId = payslipPeriod.value
+
+  return payslips.value.filter(p => {
+    const employeeName = resolveEmployee(p.userId).toLowerCase()
+    const matchQuery = !query || employeeName.includes(query) || String(p.userId ?? '').includes(query)
+    const matchStatus = !status || String(p.status || '').toLowerCase() === status
+    const matchPeriod = !periodId
+      || payPeriods.value.some(period =>
+        period.id === periodId
+        && period.periodStart === p.periodStart
+        && period.periodEnd === p.periodEnd)
+
+    return matchQuery && matchStatus && matchPeriod
+  })
+})
+
 // Summary stats
 const totalNetPay = computed(() =>
   payslips.value.reduce((sum, p) => sum + (p.netPay ?? 0), 0))
@@ -289,6 +313,38 @@ const employeeMap = computed(() =>
 
 const resolveEmployee = (userId?: number) =>
   (userId && employeeMap.value.get(userId)) || `User #${userId ?? '—'}`
+
+const exportPayslipsCsv = () => {
+  const rows = filteredPayslips.value.map(p => ({
+    Employee: resolveEmployee(p.userId),
+    EmployeeId: p.userId ?? '',
+    PeriodStart: p.periodStart ?? '',
+    PeriodEnd: p.periodEnd ?? '',
+    GrossPay: p.grossPay ?? 0,
+    NetPay: p.netPay ?? 0,
+    Status: p.status ?? '',
+  }))
+
+  if (!rows.length) {
+    showSnackbar('No payslips to export.', 'warning')
+    return
+  }
+
+  const headers = Object.keys(rows[0])
+  const csv = [
+    headers.join(','),
+    ...rows.map(r => headers.map(h => `"${String((r as any)[h] ?? '').replace(/\"/g, '""')}"`).join(',')),
+  ].join('\n')
+
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+  const link = document.createElement('a')
+  link.href = URL.createObjectURL(blob)
+  link.download = `payslips-${new Date().toISOString().slice(0, 10)}.csv`
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  URL.revokeObjectURL(link.href)
+}
 </script>
 
 <template>
@@ -544,14 +600,58 @@ const resolveEmployee = (userId?: number) =>
           <div>
             <h2 class="text-h6 font-weight-bold">Payslips</h2>
             <p class="text-caption text-medium-emphasis mb-0">
-              {{ payslips.length }} payslip{{ payslips.length !== 1 ? 's' : '' }} generated
+              {{ filteredPayslips.length }} payslip{{ filteredPayslips.length !== 1 ? 's' : '' }} shown
             </p>
           </div>
+          <div class="d-flex align-center gap-2">
+            <VBtn
+              variant="tonal"
+              color="secondary"
+              size="small"
+              prepend-icon="tabler-download"
+              @click="exportPayslipsCsv"
+            >
+              Export CSV
+            </VBtn>
+          </div>
+        </div>
+        <div class="d-flex flex-wrap gap-3 mt-4">
+          <AppTextField
+            v-model="payslipSearch"
+            label="Search employee or ID"
+            prepend-inner-icon="tabler-search"
+            style="min-width: 220px"
+          />
+          <AppSelect
+            v-model="payslipStatus"
+            label="Status"
+            clearable
+            :items="[
+              { title: 'Paid', value: 'paid' },
+              { title: 'Pending', value: 'pending' },
+              { title: 'Failed', value: 'failed' },
+            ]"
+            item-title="title"
+            item-value="value"
+            style="min-width: 160px"
+          />
+          <AppSelect
+            v-model="payslipPeriod"
+            label="Pay Period"
+            clearable
+            :items="payPeriods.map(p => ({
+              title: `${fmt(p.periodStart)} → ${fmt(p.periodEnd)}`,
+              value: p.id,
+            }))"
+            item-title="title"
+            item-value="value"
+            style="min-width: 220px"
+          />
         </div>
       </div>
       <VDivider />
       <VDataTable
-        :items="payslips"
+        :items="filteredPayslips"
         class="payslip-table"
         hide-default-header
       >
@@ -623,8 +723,8 @@ const resolveEmployee = (userId?: number) =>
         <template #no-data>
           <div class="text-center py-14">
             <VIcon size="52" color="secondary" class="mb-3">tabler-file-invoice-off</VIcon>
-            <p class="text-body-1 text-medium-emphasis">No payslips generated yet</p>
-            <p class="text-caption text-disabled">Run payroll for a period to generate payslips.</p>
+            <p class="text-body-1 text-medium-emphasis">No payslips to show</p>
+            <p class="text-caption text-disabled">Adjust filters or run payroll to generate payslips.</p>
           </div>
         </template>
       </VDataTable>

@@ -11,6 +11,7 @@ type LeaveRequest = {
   userId?: number
   employeeName?: string
   leaveType?: string
+  leaveTypeId?: number
   startDate?: string
   endDate?: string
   reason?: string
@@ -45,6 +46,7 @@ const normalizeLeave = (item: any): LeaveRequest => ({
   id: Number(item?.id ?? item?.leaveId ?? 0),
   userId: item?.userId ?? item?.user_id ?? item?.employeeId ?? undefined,
   employeeName: item?.employeeName ?? item?.employee_name ?? item?.fullName ?? item?.name ?? '',
+  leaveTypeId: Number(item?.leaveTypeId ?? item?.leave_type_id ?? 0) || undefined,
   leaveType: item?.leaveType ?? item?.type ?? '',
   startDate: item?.startDate ?? item?.start_date ?? '',
   endDate: item?.endDate ?? item?.end_date ?? '',
@@ -58,7 +60,7 @@ const isFetching = ref(false)
 let fetchLeaves = async () => {}
 
 if (businessId.value) {
-  const leavesApi = await useApi<any>(createUrl('/hr/leaves', {
+  const leavesApi = await useApi<any>(createUrl('/hr/leaves/', {
     query: {
       businessId: computed(() => businessId.value || undefined),
       status: computed(() => statusFilter.value || undefined),
@@ -71,6 +73,17 @@ if (businessId.value) {
   isFetching.value = leavesApi.isFetching.value
   watch(leavesApi.data, value => { leavesData.value = value })
   watch(leavesApi.isFetching, value => { isFetching.value = value })
+}
+
+const leaveTypesData = ref<any>(null)
+let fetchLeaveTypes = async () => {}
+if (businessId.value) {
+  const typesApi = await useApi<any>(createUrl('/hr/leave-types', {
+    query: { businessId: computed(() => businessId.value || undefined) },
+  }))
+  leaveTypesData.value = typesApi.data.value
+  fetchLeaveTypes = typesApi.execute
+  watch(typesApi.data, value => { leaveTypesData.value = value })
 }
 
 const employeesData = ref<any>(null)
@@ -91,6 +104,69 @@ const leaves = computed(() => {
   const payload = leavesData.value
   const list = payload?.data ?? payload?.items ?? payload?.leaves ?? payload?.results ?? []
   return Array.isArray(list) ? list.map(normalizeLeave).filter(item => item.id) : []
+})
+
+const leaveTypes = computed(() => {
+  const payload = leaveTypesData.value
+  const list = payload?.data ?? payload?.items ?? payload ?? []
+  if (!Array.isArray(list)) return []
+  return list.map((item: any) => ({
+    id: Number(item?.id ?? 0),
+    name: String(item?.name ?? ''),
+    isPaid: Boolean(item?.isPaid ?? item?.is_paid ?? true),
+    isActive: Boolean(item?.isActive ?? item?.is_active ?? true),
+  })).filter((item: any) => item.id && item.name && item.isActive)
+})
+
+const balancesData = ref<any>(null)
+let fetchBalances = async () => {}
+if (businessId.value) {
+  const balancesApi = await useApi<any>(createUrl('/hr/leave-balances/me'))
+  balancesData.value = balancesApi.data.value
+  fetchBalances = balancesApi.execute
+  watch(balancesApi.data, value => { balancesData.value = value })
+}
+
+const balances = computed(() => {
+  const payload = balancesData.value
+  const list = payload?.data ?? payload?.items ?? payload ?? []
+  if (!Array.isArray(list)) return []
+  return list.map((item: any) => ({
+    leaveTypeId: Number(item?.leaveTypeId ?? item?.leave_type_id ?? 0),
+    balance: Number(item?.balance ?? 0),
+    pending: Number(item?.pending ?? 0),
+    used: Number(item?.used ?? 0),
+  })).filter((item: any) => item.leaveTypeId)
+})
+
+const balanceMap = computed(() => new Map(
+  balances.value.map(b => [b.leaveTypeId, b]),
+))
+
+const selectedBalance = computed(() => {
+  if (!createForm.leaveTypeId) return null
+  return balanceMap.value.get(createForm.leaveTypeId) || null
+})
+
+const requestedDays = computed(() => {
+  if (!createForm.startDate || !createForm.endDate) return 0
+  try {
+    const start = new Date(createForm.startDate)
+    const end = new Date(createForm.endDate)
+    const diff = end.getTime() - start.getTime()
+    if (diff < 0) return 0
+    return Math.floor(diff / 86400000) + 1
+  }
+  catch {
+    return 0
+  }
+})
+
+const canSubmit = computed(() => {
+  if (!createForm.leaveTypeId || !createForm.startDate || !createForm.endDate) return false
+  if (!selectedBalance.value) return true
+  const available = selectedBalance.value.balance - selectedBalance.value.pending
+  return available >= requestedDays.value
 })
 
 const employeeNameMap = computed(() => {
@@ -143,7 +219,7 @@ watch(businessId, value => {
 
 const isCreateOpen = ref(false)
 const createForm = reactive({
-  leaveType: '',
+  leaveTypeId: null as number | null,
   startDate: '',
   endDate: '',
   reason: '',
@@ -152,28 +228,56 @@ const createForm = reactive({
 const isSubmitting = ref(false)
 
 const submitLeave = async () => {
-  if (!createForm.leaveType || !createForm.startDate || !createForm.endDate) {
+  if (!createForm.leaveTypeId || !createForm.startDate || !createForm.endDate) {
     showSnackbar('Please fill leave type, start date, and end date.', 'error')
+    return
+  }
+  if (!canSubmit.value) {
+    showSnackbar('Insufficient leave balance.', 'error')
     return
   }
   try {
     isSubmitting.value = true
+    let currentUserId = userData.value?.id ?? userData.value?.userId ?? userData.value?.user_id ?? null
+    let currentBusinessId = businessId.value
+    if (role.value !== 'employee' && (!currentUserId || !currentBusinessId)) {
+      try {
+        const me = await $api('/users/me')
+        currentUserId = me?.id ?? me?.userId ?? me?.user_id ?? currentUserId
+        currentBusinessId = me?.businessId ?? me?.business_id ?? currentBusinessId
+        useCookie('userData').value = { ...userData.value, ...me }
+      }
+      catch {
+        // fallback to existing cookie values
+      }
+    }
+    const basePayload: any = {
+      leaveTypeId: createForm.leaveTypeId,
+      startDate: createForm.startDate,
+      endDate: createForm.endDate,
+      reason: createForm.reason,
+    }
+    if (role.value !== 'employee') {
+      if (!currentUserId || !currentBusinessId) {
+        showSnackbar('Missing user or business info. Please logout and login again.', 'error')
+        isSubmitting.value = false
+        return
+      }
+      basePayload.businessId = currentBusinessId || undefined
+      basePayload.userId = currentUserId
+    }
     await $api('/hr/leaves/', {
       method: 'POST',
-      body: {
-        leaveType: createForm.leaveType,
-        startDate: createForm.startDate,
-        endDate: createForm.endDate,
-        reason: createForm.reason,
-      },
+      body: basePayload,
     })
     showSnackbar('Leave request submitted.')
     isCreateOpen.value = false
-    createForm.leaveType = ''
+    createForm.leaveTypeId = null
     createForm.startDate = ''
     createForm.endDate = ''
     createForm.reason = ''
     fetchLeaves()
+    fetchBalances()
   }
   catch {
     showSnackbar('Failed to submit leave request.', 'error')
@@ -513,12 +617,40 @@ const fmt = (d?: string) => {
         <VCardText class="pa-6">
           <VRow>
             <VCol cols="12">
-              <AppTextField
-                v-model="createForm.leaveType"
+              <AppSelect
+                v-model="createForm.leaveTypeId"
                 label="Leave Type"
-                placeholder="Annual, Sick, Emergency…"
                 prepend-inner-icon="tabler-tag"
+                :items="leaveTypes.map(t => ({ title: t.name, value: t.id }))"
+                item-title="title"
+                item-value="value"
               />
+            </VCol>
+            <VCol cols="12">
+              <div class="balance-row" v-if="selectedBalance">
+                <VChip size="x-small" color="primary" variant="tonal">
+                  Balance {{ selectedBalance.balance }}
+                </VChip>
+                <VChip size="x-small" color="warning" variant="tonal">
+                  Pending {{ selectedBalance.pending }}
+                </VChip>
+                <VChip size="x-small" color="success" variant="tonal">
+                  Available {{ selectedBalance.balance - selectedBalance.pending }}
+                </VChip>
+                <VChip size="x-small" color="secondary" variant="tonal">
+                  Requested {{ requestedDays }}
+                </VChip>
+                <VChip
+                  size="x-small"
+                  :color="canSubmit ? 'success' : 'error'"
+                  variant="tonal"
+                >
+                  {{ canSubmit ? 'Sufficient' : 'Insufficient' }}
+                </VChip>
+              </div>
+              <div v-else class="text-caption text-medium-emphasis">
+                No balance data for this leave type yet.
+              </div>
             </VCol>
             <VCol cols="12" md="6">
               <AppTextField
@@ -551,7 +683,7 @@ const fmt = (d?: string) => {
 
         <VCardText class="d-flex justify-end gap-3 pa-4">
           <VBtn variant="tonal" color="secondary" @click="isCreateOpen = false">Cancel</VBtn>
-          <VBtn color="primary" :loading="isSubmitting" prepend-icon="tabler-send" @click="submitLeave">
+          <VBtn color="primary" :loading="isSubmitting" :disabled="!canSubmit" prepend-icon="tabler-send" @click="submitLeave">
             Submit Request
           </VBtn>
         </VCardText>
@@ -729,6 +861,12 @@ const fmt = (d?: string) => {
   display: block;
 }
 
+.balance-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 /* ── Dialog ── */
 .dialog-card { border-radius: 16px !important; }
 
@@ -743,4 +881,3 @@ const fmt = (d?: string) => {
   flex-shrink: 0;
 }
 </style>
-

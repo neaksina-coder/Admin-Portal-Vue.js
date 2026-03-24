@@ -34,6 +34,7 @@ const errors = ref<Record<string, string | undefined>>({
   email: undefined,
   password: undefined,
 })
+const formError = ref<string | undefined>()
 
 const refVForm = ref<VForm>()
 
@@ -50,6 +51,7 @@ const login = async () => {
       email: undefined,
       password: undefined,
     }
+    formError.value = undefined
 
     const res = await $api('/auth/login', {
       method: 'POST',
@@ -58,6 +60,13 @@ const login = async () => {
         password: credentials.value.password,
       },
       onResponseError({ response }) {
+        const isSuspended = response.status === 403 && response._data?.detail === 'Business account is suspended'
+
+        if (isSuspended) {
+          formError.value = 'Your business is suspended. Please contact support.'
+          return
+        }
+
         errors.value = response._data?.errors ?? {
           email: response._data?.message ?? 'Login failed',
         }
@@ -202,6 +211,14 @@ const onSubmit = () => {
             ref="refVForm"
             @submit.prevent="onSubmit"
           >
+            <VAlert
+              v-if="formError"
+              type="error"
+              variant="tonal"
+              class="mb-4"
+            >
+              {{ formError }}
+            </VAlert>
             <VRow>
               <!-- email -->
               <VCol cols="12">

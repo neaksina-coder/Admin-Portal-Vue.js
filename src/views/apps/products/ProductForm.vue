@@ -3,14 +3,26 @@ const props = defineProps<{
   id?: string
   isEdit?: boolean
   productData?: any
+  businessId?: number | null
 }>()
 
 const emit = defineEmits(['save', 'cancel'])
+
+const userData = useCookie<any>('userData')
+const fallbackBusinessId = computed(() => {
+  const raw = userData.value?.businessId
+    ?? userData.value?.business_id
+    ?? userData.value?.business?.id
+    ?? userData.value?.business?.businessId
+  return raw ? Number(raw) : null
+})
+const activeBusinessId = computed(() => props.businessId ?? fallbackBusinessId.value)
 
 const { data: categoriesData } = await useApi<any>(createUrl('/categories/', {
   query: {
     skip: 0,
     limit: 100,
+    businessId: computed(() => activeBusinessId.value || undefined),
   },
 }))
 

@@ -120,6 +120,35 @@ const faqs = [
     answer: 'Checkout accepts all type of credit and debit cards.',
   },
 ]
+
+const plans = ref<{ name: string; price: number }[]>([])
+
+const loadPlans = async () => {
+  try {
+    const response = await $api('/public/plans')
+    const payload = response?.data ? response : response ?? {}
+    const list = payload?.data ?? []
+    plans.value = Array.isArray(list)
+      ? list.map((plan: any) => ({
+          name: String(plan.name),
+          price: Number(plan.price || 0),
+        }))
+      : []
+  }
+  catch (error) {
+    console.error(error)
+  }
+}
+
+const planPriceLabel = (name: string) => {
+  const match = plans.value.find(p => p.name.toLowerCase() === name.toLowerCase())
+  if (!match) return '$0/Month'
+  return `$${match.price}/Month`
+}
+
+onMounted(() => {
+  loadPlans()
+})
 </script>
 
 <template>
@@ -144,7 +173,7 @@ const faqs = [
               <p class="text-body-1 mb-11">
                 You will get full access to all the features for 14 days.
               </p>
-              <VBtn :to="{ name: 'front-pages-payment' }">
+              <VBtn :to="{ name: 'front-pages-payment', query: { plan: 'Starter', cycle: 'monthly' } }">
                 Start 14-day FREE trial
               </VBtn>
             </div>
@@ -185,9 +214,9 @@ const faqs = [
                 </th>
                 <th
                   v-for="{ plan, price } in [
-                    { plan: 'Starter', price: 'Free' },
-                    { plan: 'Pro', price: '$7.5/Month' },
-                    { plan: 'Enterprise', price: '$16/Month' },
+                    { plan: 'Basic', price: planPriceLabel('Basic') },
+                    { plan: 'Pro', price: planPriceLabel('Pro') },
+                    { plan: 'Enterprise', price: planPriceLabel('Enterprise') },
                   ]"
                   :key="plan"
                   scope="col"
@@ -300,20 +329,20 @@ const faqs = [
                 <td class="text-center py-2">
                   <VBtn
                     variant="tonal"
-                    :to="{ name: 'front-pages-payment' }"
+                    :to="{ name: 'front-pages-payment', query: { plan: 'Starter', cycle: 'monthly' } }"
                   >
                     Choose Plan
                   </VBtn>
                 </td>
                 <td class="text-center py-2">
-                  <VBtn :to="{ name: 'front-pages-payment' }">
+                  <VBtn :to="{ name: 'front-pages-payment', query: { plan: 'Pro', cycle: 'monthly' } }">
                     Choose Plan
                   </VBtn>
                 </td>
                 <td class="text-center py-2">
                   <VBtn
                     variant="tonal"
-                    :to="{ name: 'front-pages-payment' }"
+                    :to="{ name: 'front-pages-payment', query: { plan: 'Enterprise', cycle: 'monthly' } }"
                   >
                     Choose Plan
                   </VBtn>

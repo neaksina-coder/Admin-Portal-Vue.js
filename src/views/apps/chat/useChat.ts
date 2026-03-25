@@ -16,7 +16,7 @@ export const useChat = () => {
 
     return 'secondary'
   }
-
+  
   return {
     resolveAvatarBadgeVariant,
   }

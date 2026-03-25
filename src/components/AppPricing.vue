@@ -16,56 +16,41 @@ const props = defineProps<Pricing>()
 
 const annualMonthlyPlanPriceToggler = ref(true)
 
-const pricingPlans = [
-  {
-    name: 'Basic',
-    tagLine: 'A simple start for everyone',
-    logo: dollarCoinPiggyBank,
-    monthlyPrice: 0,
-    yearlyPrice: 0,
-    isPopular: false,
-    current: true,
-    features: [
-      '100 responses a month',
-      'Unlimited forms and surveys',
-      'Unlimited fields',
-      'Basic form creation tools',
-      'Up to 2 subdomains',
-    ],
-  },
-  {
-    name: 'Standard',
-    tagLine: 'For small to medium businesses',
-    logo: safeBoxWithGoldenCoin,
-    monthlyPrice: 49,
-    yearlyPrice: 499,
-    isPopular: true,
-    current: false,
-    features: [
-      'Unlimited responses',
-      'Unlimited forms and surveys',
-      'Instagram profile page',
-      'Google Docs integration',
-      'Custom “Thank you” page',
-    ],
-  },
-  {
-    name: 'Enterprise',
-    tagLine: 'Solution for big organizations',
-    logo: spaceRocket,
-    monthlyPrice: 99,
-    yearlyPrice: 999,
-    isPopular: false,
-    current: false,
-    features: [
-      'PayPal payments',
-      'Logic Jumps',
-      'File upload with 5GB storage',
-      'Custom domain support',
-      'Stripe integration',
-    ],
-  },
-]
+const pricingPlans = ref<any[]>([])
+
+const resolveFeatures = (features: any): string[] => {
+  if (Array.isArray(features)) return features.map(String)
+  if (features && typeof features === 'object')
+    return Object.keys(features).filter(key => features[key])
+  return []
+}
+
+const loadPlans = async () => {
+  try {
+    const response = await $api('/public/plans')
+    const payload = response?.data ? response : response ?? {}
+    const list = payload?.data ?? []
+    pricingPlans.value = Array.isArray(list)
+      ? list.map((plan: any) => ({
+          name: String(plan.name),
+          tagLine: 'A simple start for everyone',
+          logo: plan.name?.toLowerCase() === 'pro' ? safeBoxWithGoldenCoin : plan.name?.toLowerCase() === 'enterprise' ? spaceRocket : dollarCoinPiggyBank,
+          monthlyPrice: Number(plan.price || 0),
+          yearlyPrice: Number(plan.price || 0) * 12,
+          isPopular: String(plan.name || '').toLowerCase() === 'pro',
+          current: false,
+          features: resolveFeatures(plan.features),
+        }))
+      : []
+  }
+  catch (error) {
+    console.error(error)
+  }
+}
+
+onMounted(() => {
+  loadPlans()
+})
 </script>
 
 <template>
@@ -217,7 +202,7 @@ const pricingPlans = [
             block
             :color="plan.current ? 'success' : 'primary'"
             :variant="plan.isPopular ? 'elevated' : 'tonal'"
-            :to="{ name: 'front-pages-payment' }"
+            :to="{ name: 'front-pages-payment', query: { plan: plan.name, cycle: annualMonthlyPlanPriceToggler ? 'yearly' : 'monthly' } }"
             :active="false"
           >
             {{ plan.yearlyPrice === 0 ? 'Your Current Plan' : 'Upgrade' }}

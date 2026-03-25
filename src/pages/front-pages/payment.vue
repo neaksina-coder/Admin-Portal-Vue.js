@@ -6,6 +6,7 @@ import paypalDark from '@images/icons/payments/img/paypal-dark.png'
 import paypalLight from '@images/icons/payments/img/paypal-light.png'
 import visaDark from '@images/icons/payments/img/visa-dark.png'
 import visaLight from '@images/icons/payments/img/visa-light.png'
+import { loadStripe } from '@stripe/stripe-js'
 
 import { useConfigStore } from '@core/stores/config'
 import type { CustomInputContent } from '@core/types'
@@ -46,8 +47,11 @@ const plans = ref<{ id: number; name: string; price: number }[]>([])
 const selectedPlan = ref<string>((route.query.plan as string) || '')
 const billingCycle = ref<'monthly' | 'yearly'>((route.query.cycle as 'monthly' | 'yearly') || 'monthly')
 const paypalConfig = ref<{ clientId: string; currency: string } | null>(null)
+const stripeConfig = ref<{ publishableKey: string; currency: string } | null>(null)
 const isLoading = ref(false)
 const errorMessage = ref('')
+const successMessage = ref('')
+const stripeInstance = ref<any>(null)
 
 const form = reactive({
   businessName: '',
@@ -96,6 +100,26 @@ const loadPayPalConfig = async () => {
   paypalConfig.value = response
 }
 
+const loadStripeConfig = async () => {
+  try {
+    const response = await $api('/public/stripe/config')
+    stripeConfig.value = response
+  }
+  catch (error) {
+    stripeConfig.value = null
+  }
+}
+
+const getStripe = async () => {
+  if (!stripeConfig.value?.publishableKey)
+    return null
+  if (stripeInstance.value)
+    return stripeInstance.value
+
+  stripeInstance.value = await loadStripe(stripeConfig.value.publishableKey)
+  return stripeInstance.value
+}
+
 const loadPayPalSdk = async () => {
   if (!paypalConfig.value) return
   if ((window as any).paypal) return
@@ -120,6 +144,46 @@ const validateForm = () => {
   if (!form.businessName || !form.email || !form.password || !selectedPlan.value)
     return false
   return true
+}
+
+const startCardCheckout = async () => {
+  errorMessage.value = ''
+  successMessage.value = ''
+  if (!validateForm()) {
+    errorMessage.value = 'Please fill in business name, email, password, and select a plan.'
+    return
+  }
+
+  if (!stripeConfig.value?.publishableKey) {
+    errorMessage.value = 'Credit card checkout is not configured.'
+    return
+  }
+
+  isLoading.value = true
+  try {
+    const origin = window.location.origin
+    const payload = {
+      planName: selectedPlan.value,
+      billingCycle: billingCycle.value,
+      businessName: form.businessName,
+      email: form.email,
+      password: form.password,
+      successUrl: `${origin}/front-pages/payment?status=success`,
+      cancelUrl: `${origin}/front-pages/payment?status=cancel`,
+    }
+    const res = await $api('/public/stripe/checkout', { method: 'POST', body: payload })
+    if (res?.url)
+      window.location.href = res.url
+    else
+      errorMessage.value = 'Unable to start card checkout.'
+  }
+  catch (error: any) {
+    const detail = error?.data?.detail || error?.detail || error?.message
+    errorMessage.value = detail || 'Unable to start card checkout.'
+  }
+  finally {
+    isLoading.value = false
+  }
 }
 
 const renderPayPalButtons = async () => {
@@ -189,6 +253,13 @@ watch(
 onMounted(async () => {
   await loadPlans()
   await loadPayPalConfig()
+  await loadStripeConfig()
+  await getStripe()
+  const status = String(route.query.status || '').toLowerCase()
+  if (status === 'success')
+    successMessage.value = 'Payment completed. You can now log in.'
+  if (status === 'cancel')
+    errorMessage.value = 'Payment canceled. Please try again.'
   if (selectedRadio.value === 'paypal')
     renderPayPalButtons()
 })
@@ -311,46 +382,13 @@ onMounted(async () => {
                   <h4 class="text-h4 mb-6">
                     Credit Card Info
                   </h4>
-                  <VRow>
-                    <VCol cols="12">
-                      <AppTextField
-                        label="Card Number"
-                        placeholder="8787 2345 3458"
-                        type="number"
-                      />
-                    </VCol>
-
-                    <VCol
-                      cols="12"
-                      md="4"
-                    >
-                      <AppTextField
-                        label="Card Holder"
-                        placeholder="John Doe"
-                      />
-                    </VCol>
-
-                    <VCol
-                      cols="12"
-                      md="4"
-                    >
-                      <AppTextField
-                        label="Exp. date"
-                        placeholder="05/2020"
-                      />
-                    </VCol>
-
-                    <VCol
-                      cols="12"
-                      md="4"
-                    >
-                      <AppTextField
-                        label="CVV"
-                        type="number"
-                        placeholder="784"
-                      />
-                    </VCol>
-                  </VRow>
+                  <VAlert
+                    type="info"
+                    variant="tonal"
+                    density="comfortable"
+                  >
+                    Card details are collected securely on Stripe after you click Pay with Card.
+                  </VAlert>
                 </div>
               </VCardText>
             </VCol>
@@ -407,6 +445,9 @@ onMounted(async () => {
                   </div>
                 </div>
 
+                <div v-if="successMessage" class="text-success mb-4">
+                  {{ successMessage }}
+                </div>
                 <div v-if="errorMessage" class="text-error mb-4">
                   {{ errorMessage }}
                 </div>
@@ -419,9 +460,11 @@ onMounted(async () => {
                   block
                   color="success"
                   class="mb-8"
-                  :disabled="true"
+                  :loading="isLoading"
+                  :disabled="isLoading || !stripeConfig?.publishableKey"
+                  @click="startCardCheckout"
                 >
-                  Credit card checkout not enabled
+                  Pay with Card
                 </VBtn>
 
                 <div class="text-body-1">

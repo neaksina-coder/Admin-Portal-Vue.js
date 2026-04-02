@@ -20,6 +20,27 @@ const hrNav = [
         subject: 'Apps',
       },
       {
+        title: 'Recruitment / ATS',
+        icon: { icon: 'tabler-briefcase' },
+        to: { name: 'hr-recruitment' },
+        action: 'read',
+        subject: 'Apps',
+      },
+      {
+        title: 'Onboarding / Offboarding',
+        icon: { icon: 'tabler-user-check' },
+        to: { name: 'hr-onboarding-offboarding' },
+        action: 'read',
+        subject: 'Apps',
+      },
+      {
+        title: 'Time Tracking',
+        icon: { icon: 'tabler-clock' },
+        to: { name: 'hr-time-tracking' },
+        action: 'read',
+        subject: 'Apps',
+      },
+      {
         title: 'Leaves',
         icon: { icon: 'tabler-calendar-time' },
         to: { name: 'hr-leaves' },

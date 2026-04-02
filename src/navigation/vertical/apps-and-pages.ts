@@ -31,20 +31,27 @@ const operationsNavGroup = {
       action: 'read',
       subject: 'Apps',
     },
+    // {
+    //   title: 'Email',
+    //   icon: { icon: 'tabler-mail' },
+    //   to: 'apps-email',
+    //   action: 'read',
+    //   subject: 'Apps',
+    // },
     {
-      title: 'Email',
-      icon: { icon: 'tabler-mail' },
-      to: 'apps-email',
+      title: 'Contact Inquiries',
+      icon: { icon: 'tabler-inbox' },
+      to: 'apps-contact-inquiries',
       action: 'read',
       subject: 'Apps',
     },
-    {
-      title: 'Calendar',
-      icon: { icon: 'tabler-calendar' },
-      to: 'apps-calendar',
-      action: 'read',
-      subject: 'Apps',
-    },
+    // {
+    //   title: 'Calendar',
+    //   icon: { icon: 'tabler-calendar' },
+    //   to: 'apps-calendar',
+    //   action: 'read',
+    //   subject: 'Apps',
+    // },
      
   ],
 }

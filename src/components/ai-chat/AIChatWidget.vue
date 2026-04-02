@@ -63,6 +63,12 @@
               <div>
                 <p class="ai-title">
                   {{ aiName }}
+                  <span
+                    class="ai-mode"
+                    :class="modeClass"
+                  >
+                    {{ modeLabel }}
+                  </span>
                 </p>
                 <p class="ai-subtitle">
                   {{ isOnline ? 'Online now' : 'Offline' }}
@@ -180,7 +186,7 @@
               :ai-avatar="aiAvatar"
             />
 
-            <TypingIndicator v-if="isTyping && !requiresProfile" />
+            <TypingIndicator v-if="isTyping && !requiresProfile && mode === 'AI'" />
           </section>
 
           <QuickActions
@@ -263,6 +269,7 @@ const isSending = computed(() => chatStore.isSending)
 const unreadCount = computed(() => chatStore.unreadCount)
 const isOnline = computed(() => chatStore.isOnline)
 const requiresProfile = computed(() => chatStore.requiresProfile)
+const mode = computed(() => chatStore.mode)
 
 const profileName = ref('')
 const profileEmail = ref('')
@@ -289,6 +296,9 @@ const avatarBg = computed(() => {
   const hue = Math.abs(hash) % 360
   return `linear-gradient(135deg, hsl(${hue} 75% 45%), hsl(${(hue + 40) % 360} 70% 55%))`
 })
+
+const modeLabel = computed(() => (mode.value === 'ADMIN' ? 'ADMIN' : 'AI'))
+const modeClass = computed(() => (mode.value === 'ADMIN' ? 'admin' : 'ai'))
 const openChat = () => {
   isOpen.value = true
   chatStore.markAsRead()
@@ -633,12 +643,32 @@ onBeforeUnmount(() => {
   margin: 0;
   font-size: 18px;
   font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .ai-subtitle {
   margin: 0;
   font-size: 12px;
   opacity: 0.9;
+}
+
+.ai-mode {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.22);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+}
+
+.ai-mode.admin {
+  background: rgba(249, 115, 22, 0.35);
+  border-color: rgba(249, 115, 22, 0.65);
 }
 
 .ai-header-actions {

@@ -25,6 +25,38 @@ interface Product {
   created_at: string
 }
 
+const userData = useCookie<any>('userData')
+const role = computed(() => String(userData.value?.role || '').toLowerCase())
+const isBusinessPicker = computed(() => ['superuser', 'admin'].includes(role.value))
+
+const initialBusinessId = computed(() => {
+  const raw = userData.value?.businessId
+    ?? userData.value?.business_id
+    ?? userData.value?.business?.id
+    ?? userData.value?.business?.businessId
+  return raw ? Number(raw) : null
+})
+const selectedBusinessId = ref<number | null>(initialBusinessId.value)
+const activeBusinessId = computed(() => selectedBusinessId.value ?? initialBusinessId.value)
+
+const businesses = ref<{ title: string; value: number }[]>([])
+const loadBusinesses = async () => {
+  try {
+    const response = await $api('/businesses')
+    const payload = response?.data ? response : response ?? {}
+    const list = payload?.items ?? payload?.data ?? payload?.businesses ?? payload?.results ?? []
+    businesses.value = Array.isArray(list)
+      ? list.map((item: any) => ({
+          title: item.name ?? item.tenantId ?? String(item.id),
+          value: Number(item.id),
+        }))
+      : []
+  }
+  catch (error) {
+    console.error(error)
+  }
+}
+
 const headers = [
   { title: 'PRODUCT', key: 'name', width: '30%' },
   { title: 'CATEGORY', key: 'category', width: '15%' },
@@ -47,6 +79,7 @@ const { data: categoriesData, execute: fetchCategories } = await useApi<any>(cre
   query: {
     skip: 0,
     limit: 100,
+    businessId: computed(() => activeBusinessId.value || undefined),
   },
 }))
 
@@ -54,6 +87,7 @@ const { data: productsData, execute: fetchProducts } = await useApi<any>(createU
   query: {
     skip,
     limit,
+    businessId: computed(() => activeBusinessId.value || undefined),
     category_id: computed(() => (selectedCategory.value === 'all' ? undefined : selectedCategory.value)),
     status: computed(() => (selectedStatus.value === 'all' ? undefined : selectedStatus.value)),
   },
@@ -77,11 +111,19 @@ const products = computed((): Product[] => (productsData.value?.data ?? []))
 const totalProducts = computed(() => productsData.value?.total ?? 0)
 
 const filteredProducts = computed(() => {
+  let list = products.value
+
+  if (selectedCategory.value !== 'all')
+    list = list.filter(product => product.category_id === selectedCategory.value)
+
+  if (selectedStatus.value !== 'all')
+    list = list.filter(product => product.status === selectedStatus.value)
+
   const query = searchQuery.value.trim().toLowerCase()
   if (!query)
-    return products.value
+    return list
 
-  return products.value.filter(product =>
+  return list.filter(product =>
     product.name.toLowerCase().includes(query) || product.sku.toLowerCase().includes(query),
   )
 })
@@ -145,6 +187,10 @@ const deleteProduct = async () => {
 }
 
 const openAddDialog = () => {
+  if (!activeBusinessId.value) {
+    showSnackbar('Please select a business first.', 'error')
+    return
+  }
   isEditMode.value = false
   editingProduct.value = null
   isFormDialogVisible.value = true
@@ -168,7 +214,10 @@ const handleSave = async (productData: Product) => {
     else {
       await $api('/products/', {
         method: 'POST',
-        body: productData,
+        body: {
+          ...productData,
+          businessId: activeBusinessId.value,
+        },
       })
       showSnackbar('Product added successfully!')
     }
@@ -181,7 +230,22 @@ const handleSave = async (productData: Product) => {
 }
 
 watch([selectedCategory, selectedStatus, page, itemsPerPage], () => {
+  if (!activeBusinessId.value)
+    return
   fetchProducts()
+})
+
+watch(activeBusinessId, () => {
+  if (!activeBusinessId.value)
+    return
+  page.value = 1
+  fetchProducts()
+  fetchCategories()
+})
+
+onMounted(() => {
+  if (isBusinessPicker.value)
+    loadBusinesses()
 })
 </script>
 
@@ -214,6 +278,15 @@ watch([selectedCategory, selectedStatus, page, itemsPerPage], () => {
             Add New Product
           </VBtn>
         </div>
+
+        <VAlert
+          v-if="isBusinessPicker && !activeBusinessId"
+          type="warning"
+          variant="tonal"
+          class="mb-6"
+        >
+          Select a business to view products.
+        </VAlert>
 
         <!-- Stats Row -->
         <VRow class="match-height">
@@ -280,6 +353,19 @@ watch([selectedCategory, selectedStatus, page, itemsPerPage], () => {
         <!-- Filters Section -->
         <div class="filters-wrapper mb-6">
           <VRow>
+            <VCol v-if="isBusinessPicker" cols="12" md="3">
+              <VSelect
+                v-model="selectedBusinessId"
+                :items="businesses"
+                label="Business"
+                clearable
+                clear-icon="tabler-x"
+                variant="outlined"
+                density="comfortable"
+                hide-details
+              />
+            </VCol>
+
             <VCol cols="12" md="5">
               <VTextField
                 v-model="searchQuery"
@@ -301,6 +387,7 @@ watch([selectedCategory, selectedStatus, page, itemsPerPage], () => {
                 variant="outlined"
                 density="comfortable"
                 hide-details
+                :disabled="!activeBusinessId"
               />
             </VCol>
 
@@ -322,6 +409,7 @@ watch([selectedCategory, selectedStatus, page, itemsPerPage], () => {
                 color="secondary"
                 block
                 prepend-icon="tabler-refresh"
+                :disabled="!activeBusinessId"
                 @click="fetchProducts"
               >
                 Refresh
@@ -560,6 +648,7 @@ watch([selectedCategory, selectedStatus, page, itemsPerPage], () => {
       v-model="isFormDialogVisible"
       :is-edit="isEditMode"
       :product="editingProduct"
+      :business-id="activeBusinessId"
       @save="handleSave"
     />
 

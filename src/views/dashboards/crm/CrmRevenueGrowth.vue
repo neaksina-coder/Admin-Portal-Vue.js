@@ -2,13 +2,25 @@
 import { useTheme } from 'vuetify'
 import { hexToRgb } from '@layouts/utils'
 
+interface Props {
+  amount?: string | number
+  growthPct?: number
+  seriesData?: number[]
+  labels?: string[]
+}
+
+const props = defineProps<Props>()
+
 const vuetifyTheme = useTheme()
 
-const series = [
+const fallbackSeries = [25, 40, 55, 70, 85, 70, 55]
+const fallbackLabels = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
+
+const series = computed(() => [
   {
-    data: [25, 40, 55, 70, 85, 70, 55],
+    data: props.seriesData?.length ? props.seriesData : fallbackSeries,
   },
-]
+])
 
 const chartOptions = computed(() => {
   const currentTheme = vuetifyTheme.current.value.colors
@@ -64,7 +76,7 @@ const chartOptions = computed(() => {
       show: false,
     },
     xaxis: {
-      categories: ['M', 'T', 'W', 'T', 'F', 'S', 'S'],
+      categories: props.labels?.length ? props.labels : fallbackLabels,
       axisBorder: {
         show: false,
       },
@@ -198,14 +210,18 @@ const chartOptions = computed(() => {
 
         <div>
           <h5 class="text-h3 mb-2">
-            $4,673
+            {{ props.amount ?? '$4,673' }}
           </h5>
           <VChip
             label
-            color="success"
+            :color="(props.growthPct ?? 0) >= 0 ? 'success' : 'error'"
             size="small"
           >
-            +15.2%
+            {{
+              props.growthPct === undefined || props.growthPct === null
+                ? '+15.2%'
+                : `${props.growthPct >= 0 ? '+' : ''}${props.growthPct.toFixed(1)}%`
+            }}
           </VChip>
         </div>
       </div>

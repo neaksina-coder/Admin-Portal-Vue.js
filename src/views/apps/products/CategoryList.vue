@@ -8,6 +8,38 @@ interface Category {
   created_at: string
 }
 
+const userData = useCookie<any>('userData')
+const role = computed(() => String(userData.value?.role || '').toLowerCase())
+const isBusinessPicker = computed(() => ['superuser', 'admin'].includes(role.value))
+
+const initialBusinessId = computed(() => {
+  const raw = userData.value?.businessId
+    ?? userData.value?.business_id
+    ?? userData.value?.business?.id
+    ?? userData.value?.business?.businessId
+  return raw ? Number(raw) : null
+})
+const selectedBusinessId = ref<number | null>(initialBusinessId.value)
+const activeBusinessId = computed(() => selectedBusinessId.value ?? initialBusinessId.value)
+
+const businesses = ref<{ title: string; value: number }[]>([])
+const loadBusinesses = async () => {
+  try {
+    const response = await $api('/businesses')
+    const payload = response?.data ? response : response ?? {}
+    const list = payload?.items ?? payload?.data ?? payload?.businesses ?? payload?.results ?? []
+    businesses.value = Array.isArray(list)
+      ? list.map((item: any) => ({
+          title: item.name ?? item.tenantId ?? String(item.id),
+          value: Number(item.id),
+        }))
+      : []
+  }
+  catch (error) {
+    console.error(error)
+  }
+}
+
 const headers = [
   { title: 'CATEGORY', key: 'name', width: '30%' },
   { title: 'SLUG', key: 'slug', width: '25%' },
@@ -28,6 +60,7 @@ const { data: categoriesData, execute: fetchCategories } = await useApi<any>(cre
   query: {
     skip,
     limit,
+    businessId: computed(() => activeBusinessId.value || undefined),
     status: computed(() => (selectedStatus.value === 'all' ? undefined : selectedStatus.value)),
   },
 }))
@@ -69,6 +102,10 @@ const showSnackbar = (text: string, color: string = 'success') => {
 }
 
 const openAddDialog = () => {
+  if (!activeBusinessId.value) {
+    showSnackbar('Please select a business first.', 'error')
+    return
+  }
   isEditMode.value = false
   editingCategory.value = null
   isDialogVisible.value = true
@@ -148,7 +185,7 @@ const saveCategory = async () => {
     else {
       await $api('/categories/', {
         method: 'POST',
-        body: { ...formData.value },
+        body: { ...formData.value, businessId: activeBusinessId.value },
       })
       showSnackbar('Category created successfully!')
     }
@@ -193,7 +230,21 @@ const getCategoryColor = (index: number) => {
 }
 
 watch([selectedStatus, page, itemsPerPage], () => {
+  if (!activeBusinessId.value)
+    return
   fetchCategories()
+})
+
+watch(activeBusinessId, () => {
+  if (!activeBusinessId.value)
+    return
+  page.value = 1
+  fetchCategories()
+})
+
+onMounted(() => {
+  if (isBusinessPicker.value)
+    loadBusinesses()
 })
 </script>
 
@@ -226,6 +277,15 @@ watch([selectedStatus, page, itemsPerPage], () => {
             Add New Category
           </VBtn>
         </div>
+
+        <VAlert
+          v-if="isBusinessPicker && !activeBusinessId"
+          type="warning"
+          variant="tonal"
+          class="mb-6"
+        >
+          Select a business to view categories.
+        </VAlert>
 
         <!-- Stats Row -->
         <VRow class="match-height">
@@ -292,6 +352,19 @@ watch([selectedStatus, page, itemsPerPage], () => {
         <!-- Filters Section -->
         <div class="filters-wrapper mb-6">
           <VRow>
+            <VCol v-if="isBusinessPicker" cols="12" md="4">
+              <VSelect
+                v-model="selectedBusinessId"
+                :items="businesses"
+                label="Business"
+                clearable
+                clear-icon="tabler-x"
+                variant="outlined"
+                density="comfortable"
+                hide-details
+              />
+            </VCol>
+
             <VCol cols="12" md="6">
               <VTextField
                 v-model="searchQuery"
@@ -301,6 +374,7 @@ watch([selectedStatus, page, itemsPerPage], () => {
                 density="comfortable"
                 hide-details
                 clearable
+                :disabled="!activeBusinessId"
               />
             </VCol>
 
@@ -313,6 +387,7 @@ watch([selectedStatus, page, itemsPerPage], () => {
                 variant="outlined"
                 density="comfortable"
                 hide-details
+                :disabled="!activeBusinessId"
               />
             </VCol>
 
@@ -322,6 +397,7 @@ watch([selectedStatus, page, itemsPerPage], () => {
                 color="secondary"
                 block
                 prepend-icon="tabler-refresh"
+                :disabled="!activeBusinessId"
                 @click="fetchCategories"
               >
                 Refresh

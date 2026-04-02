@@ -16,10 +16,22 @@ const snackbar = ref(false)
 const snackbarText = ref('')
 const snackbarColor = ref<'success' | 'error'>('success')
 
+const suspendedDetail = 'Business account is suspended'
+const suspendedMessage = 'Your business is suspended. Please contact support.'
+
 const showSnackbar = (text: string, color: 'success' | 'error' = 'success') => {
   snackbarText.value = text
   snackbarColor.value = color
   snackbar.value = true
+}
+
+const getSuspendedErrorMessage = (error: unknown) => {
+  const detail = (error as any)?.data?.detail ?? (error as any)?.response?._data?.detail
+
+  if (detail === suspendedDetail)
+    return suspendedMessage
+
+  return undefined
 }
 
 const resetPasswordForm = () => {
@@ -87,6 +99,12 @@ const updatePassword = async () => {
     resetPasswordForm()
   }
   catch (error) {
+    const suspendedErrorMessage = getSuspendedErrorMessage(error)
+    if (suspendedErrorMessage) {
+      showSnackbar(suspendedErrorMessage, 'error')
+      return
+    }
+
     const apiMessage = (error as any)?.data?.message || (error as any)?.response?._data?.message
     if (apiMessage === 'Current password is incorrect')
       currentPasswordError.value = apiMessage

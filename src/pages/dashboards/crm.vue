@@ -16,6 +16,110 @@ import { useTheme } from 'vuetify'
 
 const vuetifyTheme = useTheme()
 
+const BUSINESS_ID = Number(import.meta.env.VITE_BUSINESS_ID ?? 1)
+const RANGE = '30d'
+
+type OverviewPayload = {
+  ordersCount?: number
+  salesTotal?: number
+  profitTotal?: number
+  customersNew?: number
+  growthPct?: number
+}
+
+type SeriesPoint = { period?: string; value?: number }
+type SegmentPoint = { segment?: string; count?: number }
+
+const overview = ref<OverviewPayload>({})
+const revenueDaily = ref<SeriesPoint[]>([])
+const revenueMonthly = ref<SeriesPoint[]>([])
+const segments = ref<SegmentPoint[]>([])
+const customersSeries = ref<SeriesPoint[]>([])
+const ordersSeries = ref<SeriesPoint[]>([])
+
+const toNumber = (value: unknown) => {
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? parsed : 0
+}
+
+const formatCount = (value: unknown) => kFormatter(toNumber(value))
+const formatMoney = (value: unknown) => `$${kFormatter(toNumber(value))}`
+
+const formatPeriodLabel = (value?: string, mode: 'day' | 'month' = 'day') => {
+  if (!value)
+    return ''
+
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime()))
+    return String(value)
+
+  if (mode === 'month')
+    return date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' })
+
+  return date.toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' })
+}
+
+const normalizeList = (payload: any) => {
+  return payload?.items
+    ?? payload?.data?.items
+    ?? payload?.data?.results
+    ?? payload?.data?.messages
+    ?? payload?.data
+    ?? payload?.results
+    ?? payload
+    ?? []
+}
+
+const loadDashboard = async () => {
+  try {
+    const [
+      overviewRes,
+      revenueDailyRes,
+      revenueMonthlyRes,
+      segmentsRes,
+      customersRes,
+      ordersRes,
+    ] = await Promise.all([
+      $api(`/dashboard/overview?businessId=${BUSINESS_ID}&range=${RANGE}`),
+      $api(`/dashboard/revenue-series?businessId=${BUSINESS_ID}&range=${RANGE}&interval=day`),
+      $api(`/dashboard/revenue-series?businessId=${BUSINESS_ID}&range=${RANGE}&interval=month`),
+      $api(`/dashboard/segments?businessId=${BUSINESS_ID}`),
+      $api(`/dashboard/customers-series?businessId=${BUSINESS_ID}&range=${RANGE}&interval=day`),
+      $api(`/dashboard/orders-series?businessId=${BUSINESS_ID}&range=${RANGE}&interval=day`),
+    ])
+
+    const overviewPayload = overviewRes?.data ? overviewRes : overviewRes ?? {}
+    overview.value = overviewPayload?.data ?? overviewPayload ?? {}
+
+    revenueDaily.value = Array.isArray(normalizeList(revenueDailyRes?.data ? revenueDailyRes : revenueDailyRes ?? {}))
+      ? normalizeList(revenueDailyRes?.data ? revenueDailyRes : revenueDailyRes ?? {})
+      : []
+
+    revenueMonthly.value = Array.isArray(normalizeList(revenueMonthlyRes?.data ? revenueMonthlyRes : revenueMonthlyRes ?? {}))
+      ? normalizeList(revenueMonthlyRes?.data ? revenueMonthlyRes : revenueMonthlyRes ?? {})
+      : []
+
+    segments.value = Array.isArray(normalizeList(segmentsRes?.data ? segmentsRes : segmentsRes ?? {}))
+      ? normalizeList(segmentsRes?.data ? segmentsRes : segmentsRes ?? {})
+      : []
+
+    customersSeries.value = Array.isArray(normalizeList(customersRes?.data ? customersRes : customersRes ?? {}))
+      ? normalizeList(customersRes?.data ? customersRes : customersRes ?? {})
+      : []
+
+    ordersSeries.value = Array.isArray(normalizeList(ordersRes?.data ? ordersRes : ordersRes ?? {}))
+      ? normalizeList(ordersRes?.data ? ordersRes : ordersRes ?? {})
+      : []
+  }
+  catch (error) {
+    console.error('Dashboard load failed', error)
+  }
+}
+
+onMounted(() => {
+  loadDashboard()
+})
+
 const chartJsCustomColors = {
   white: '#fff',
   yellow: '#ffe800',
@@ -37,24 +141,40 @@ const chartJsCustomColors = {
   scatterChartWarning: '#ff9f43',
 }
 
-const simpleStatisticsDemoCards = [
-  {
-    icon: 'tabler-credit-card',
-    color: 'error',
-    title: 'Total Profit',
-    subTitle: 'Last week',
-    stat: '1.28k',
-    change: '-12.2%',
-  },
+const simpleStatisticsDemoCards = computed(() => [
   {
     icon: 'tabler-currency-dollar',
     color: 'success',
-    title: 'Total Sales',
-    subTitle: 'Last week',
-    stat: '$4,673',
-    change: '+25.2%',
+    title: 'Total Profit',
+    subTitle: 'Last 30 days',
+    stat: formatMoney(overview.value.profitTotal),
+    change: overview.value.growthPct ?? 0,
   },
-]
+  {
+    icon: 'tabler-users',
+    color: 'primary',
+    title: 'New Customers',
+    subTitle: 'Last 30 days',
+    stat: formatCount(overview.value.customersNew),
+    change: overview.value.growthPct ?? 0,
+  },
+])
+
+const orderSeriesValues = computed(() => ordersSeries.value.map(item => toNumber(item.value)).slice(-7))
+const orderSeriesLabels = computed(() => ordersSeries.value.map(item => formatPeriodLabel(item.period, 'day')).slice(-7))
+
+const revenueDailyValues = computed(() => revenueDaily.value.map(item => toNumber(item.value)).slice(-7))
+const revenueDailyLabels = computed(() => revenueDaily.value.map(item => formatPeriodLabel(item.period, 'day')).slice(-7))
+
+const revenueMonthlyValues = computed(() => revenueMonthly.value.map(item => toNumber(item.value)))
+const revenueMonthlyLabels = computed(() => revenueMonthly.value.map(item => formatPeriodLabel(item.period, 'month')))
+
+const customersValues = computed(() => customersSeries.value.map(item => toNumber(item.value)))
+const customersLabels = computed(() => customersSeries.value.map(item => formatPeriodLabel(item.period, 'day')))
+
+const segmentData = computed(() => segments.value
+  .filter(item => item.segment && item.count !== undefined)
+  .map(item => ({ segment: String(item.segment), count: toNumber(item.count) })))
 </script>
 
 <template>
@@ -65,7 +185,14 @@ const simpleStatisticsDemoCards = [
       sm="6"
       lg="2"
     >
-      <CrmOrderBarChart />
+      <CrmOrderBarChart
+        title="Orders"
+        subtitle="Last 30 days"
+        :value="formatCount(overview.ordersCount)"
+        :change="overview.growthPct ?? 0"
+        :series-data="orderSeriesValues"
+        :categories="orderSeriesLabels"
+      />
     </VCol>
 
     <VCol
@@ -74,7 +201,13 @@ const simpleStatisticsDemoCards = [
       sm="6"
       lg="2"
     >
-      <CrmSalesAreaCharts />
+      <CrmSalesAreaCharts
+        title="Sales"
+        subtitle="Last 30 days"
+        :value="formatMoney(overview.salesTotal)"
+        :change="overview.growthPct ?? 0"
+        :series-data="revenueDailyValues"
+      />
     </VCol>
 
     <VCol
@@ -109,11 +242,11 @@ const simpleStatisticsDemoCards = [
             {{ demo.stat }}
           </p>
           <VChip
-            :color="demo.color"
+            :color="demo.change >= 0 ? 'success' : 'error'"
             label
             size="small"
           >
-            {{ demo.change }}
+            {{ `${demo.change >= 0 ? '+' : ''}${demo.change.toFixed(1)}%` }}
           </VChip>
         </VCardText>
       </VCard>
@@ -125,7 +258,12 @@ const simpleStatisticsDemoCards = [
       md="8"
       lg="4"
     >
-      <CrmRevenueGrowth />
+      <CrmRevenueGrowth
+        :amount="formatMoney(overview.salesTotal)"
+        :growth-pct="overview.growthPct ?? 0"
+        :series-data="revenueDailyValues"
+        :labels="revenueDailyLabels"
+      />
     </VCol>
 
     <!-- 👉 Earning Reports -->
@@ -133,7 +271,7 @@ const simpleStatisticsDemoCards = [
       cols="12"
       md="7"
     >
-      <CrmEarningReportsYearlyOverview />
+      <CrmEarningReportsYearlyOverview :segments="segmentData" />
     </VCol>
 
     <!-- 👉 Latest Statistics -->
@@ -159,7 +297,11 @@ const simpleStatisticsDemoCards = [
         </VCardItem>
 
         <VCardText>
-          <ChartJsBarChart :colors="chartJsCustomColors" />
+          <ChartJsBarChart
+            :colors="chartJsCustomColors"
+            :labels="customersLabels"
+            :values="customersValues"
+          />
         </VCardText>
       </VCard>
     </VCol>
@@ -170,7 +312,12 @@ const simpleStatisticsDemoCards = [
     >
       <VCard title="Data Science">
         <VCardText>
-          <ChartJsLineChart :colors="chartJsCustomColors" />
+          <ChartJsLineChart
+            :colors="chartJsCustomColors"
+            :labels="revenueMonthlyLabels"
+            :values="revenueMonthlyValues"
+            dataset-label="Revenue"
+          />
         </VCardText>
       </VCard>
     </VCol>

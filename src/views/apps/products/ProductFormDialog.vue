@@ -6,6 +6,7 @@ interface Props {
   modelValue: boolean
   isEdit?: boolean
   product?: any
+  businessId?: number | null
 }
 
 interface Emit {
@@ -42,9 +43,10 @@ const handleCancel = () => {
   <VDialog v-model="dialog" max-width="800px">
     <VCard :title="isEdit ? 'Edit Product' : 'Add New Product'">
       <VCardText>
-        <ProductForm 
-          :is-edit="isEdit" 
+        <ProductForm
+          :is-edit="isEdit"
           :product-data="product"
+          :business-id="businessId"
           @save="handleSave" 
           @cancel="handleCancel" 
         />

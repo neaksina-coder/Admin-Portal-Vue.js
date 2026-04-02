@@ -34,6 +34,7 @@ const errors = ref<Record<string, string | undefined>>({
   email: undefined,
   password: undefined,
 })
+const formError = ref<string | undefined>()
 
 const refVForm = ref<VForm>()
 
@@ -50,6 +51,7 @@ const login = async () => {
       email: undefined,
       password: undefined,
     }
+    formError.value = undefined
 
     const res = await $api('/auth/login', {
       method: 'POST',
@@ -58,6 +60,13 @@ const login = async () => {
         password: credentials.value.password,
       },
       onResponseError({ response }) {
+        const isSuspended = response.status === 403 && response._data?.detail === 'Business account is suspended'
+
+        if (isSuspended) {
+          formError.value = 'Your business is suspended. Please contact support.'
+          return
+        }
+
         errors.value = response._data?.errors ?? {
           email: response._data?.message ?? 'Login failed',
         }
@@ -88,6 +97,19 @@ const login = async () => {
       superuser: [
         { action: 'manage', subject: 'all' },
       ],
+      customer_owner: [
+        { action: 'read', subject: 'Apps' },
+        { action: 'read', subject: 'Products' },
+        { action: 'read', subject: 'Categories' },
+      ],
+      hr_admin: [
+        { action: 'read', subject: 'Apps' },
+        { action: 'read', subject: 'Products' },
+        { action: 'read', subject: 'Categories' },
+      ],
+      employee: [
+        { action: 'read', subject: 'Apps' },
+      ],
     }
     const userAbilityRules = res.userAbilityRules ?? roleAbilityMap[role] ?? []
 
@@ -103,7 +125,12 @@ const login = async () => {
     // Redirect to `to` query if exist or redirect to index route
     // ❗ nextTick is required to wait for DOM updates and later redirect
     await nextTick(() => {
-      const defaultRoute = role === 'user' ? { name: 'front-pages-landing-page' } : { name: 'dashboards-crm' }
+      const hrRoles = ['customer_owner', 'hr_admin', 'employee']
+      const defaultRoute = role === 'user'
+        ? { name: 'front-pages-landing-page' }
+        : hrRoles.includes(role)
+          ? { name: 'hr-dashboard' }
+          : { name: 'dashboards-crm' }
       router.replace(route.query.to ? String(route.query.to) : defaultRoute)
     })
   }
@@ -184,6 +211,14 @@ const onSubmit = () => {
             ref="refVForm"
             @submit.prevent="onSubmit"
           >
+            <VAlert
+              v-if="formError"
+              type="error"
+              variant="tonal"
+              class="mb-4"
+            >
+              {{ formError }}
+            </VAlert>
             <VRow>
               <!-- email -->
               <VCol cols="12">

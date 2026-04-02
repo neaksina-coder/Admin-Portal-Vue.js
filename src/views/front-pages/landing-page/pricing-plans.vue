@@ -6,65 +6,49 @@ import shuttleRocket from '@images/front-pages/icons/shuttle-rocket.png'
 
 const annualMonthlyPlanPriceToggler = ref(true)
 
-const pricingPlans = [
-  {
-    title: 'Basic',
-    image: paperPlane,
-    monthlyPrice: 19,
-    yearlyPrice: 168,
-    features: [
-      'Timeline',
-      'Basic search',
-      'Live chat widget',
-      'Email marketing',
-      'Custom Forms',
-      'Traffic analytics',
-      'Basic Support',
-    ],
-    supportType: 'Basic',
-    supportMedium: 'Only Email',
-    respondTime: 'AVG. Time: 24h',
-    current: false,
-  },
-  {
-    title: 'Favourite',
-    image: plane,
-    monthlyPrice: 29,
-    yearlyPrice: 264,
-    features: [
-      'Everything in basic',
-      'Timeline with database',
-      'Advanced search',
-      'Marketing automation',
-      'Advanced chatbot',
-      'Campaign management',
-      'Collaboration tools',
-    ],
-    supportType: 'Standard',
-    supportMedium: 'Email & Chat',
-    respondTime: 'AVG. Time: 6h',
-    current: true,
-  },
-  {
-    title: 'Standard',
-    image: shuttleRocket,
-    monthlyPrice: 49,
-    yearlyPrice: 444,
-    features: [
-      'Campaign management',
-      'Timeline with database',
-      'Fuzzy search',
-      'A/B testing sanbox',
-      'Custom permissions',
-      'Social media automation',
-      'Sales automation tools',
-    ],
-    supportType: 'Exclusive',
-    supportMedium: 'Email, Chat & Google Meet',
-    respondTime: 'Live Support',
-    current: false,
-  },
-]
+const pricingPlans = ref<any[]>([])
+
+const resolveFeatures = (features: any): string[] => {
+  if (Array.isArray(features)) return features.map(String)
+  if (features && typeof features === 'object')
+    return Object.keys(features).filter(key => features[key])
+  return []
+}
+
+const resolveImage = (name: string) => {
+  const key = name.toLowerCase()
+  if (key === 'pro') return plane
+  if (key === 'enterprise') return shuttleRocket
+  return paperPlane
+}
+
+const loadPlans = async () => {
+  try {
+    const response = await $api('/public/plans')
+    const payload = response?.data ? response : response ?? {}
+    const list = payload?.data ?? []
+    pricingPlans.value = Array.isArray(list)
+      ? list.map((plan: any) => ({
+          title: String(plan.name),
+          image: resolveImage(String(plan.name)),
+          monthlyPrice: Number(plan.price || 0),
+          yearlyPrice: Number(plan.price || 0) * 12,
+          features: resolveFeatures(plan.features),
+          supportType: String(plan.name),
+          supportMedium: 'Email',
+          respondTime: 'AVG. Time: 24h',
+          current: false,
+        }))
+      : []
+  }
+  catch (error) {
+    console.error(error)
+  }
+}
+
+onMounted(() => {
+  loadPlans()
+})
 </script>
 
 <template>
@@ -190,7 +174,7 @@ const pricingPlans = [
                   block
                   :variant="plan.current ? 'elevated' : 'tonal'"
                   class="mt-8"
-                  :to="{ name: 'front-pages-payment' }"
+                  :to="{ name: 'front-pages-payment', query: { plan: plan.title, cycle: annualMonthlyPlanPriceToggler ? 'yearly' : 'monthly' } }"
                 >
                   Get Started
                 </VBtn>
